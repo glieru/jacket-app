@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=Shippori+Antique+B1&display=swap" rel="stylesheet">
+  <title>ジャケットメーカー（フレーム＋テキスト＋プリセット）</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px 32px;
+      background: #111;
+      color: #f5f5f5;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      background: #1c1c1c;
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: 0.85;
+    }
+
+    label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    input[type="file"],
+    select,
+    button,
+    input[type="range"],
+    input[type="color"],
+    input[type="text"] {
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* ファイル選択ボタンを PNGダウンロード と同じ系の見た目にする */
+    input[type="file"] {
+      font-size: 0.85rem;
+      color: #ddd;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* モダンブラウザ用 */
+    input[type="file"]::file-selector-button {
+      background: #4ade80;
+      color: #111;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* WebKit系の古い指定（Safari対策） */
+    input[type="file"]::-webkit-file-upload-button {
+      background: #4ade80;
+      color: #111;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    input[type="file"]::file-selector-button:hover,
+    input[type="file"]::-webkit-file-upload-button:hover {
+      background: #6ee7b7; /* ちょっとだけ明るく */
+    }
+
+    select,
+    button {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      font-size: 0.9rem;
+    }
+
+    select {
+      background: #222;
+      color: #f5f5f5;
+    }
+
+    button {
+      background: #4ade80;
+      color: #111;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      background: #555;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    input[type="text"] {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      background: #222;
+      color: #f5f5f5;
+      font-size: 0.9rem;
+    }
+
+    canvas {
+      margin-top: 12px;
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px;
+      background: #000;
+      display: block;
+    }
+
+    .note {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    /* レイアウト：左プレビュー / 右コントロール */
+    .layout {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+
+    .layout-left {
+      flex: 1.1;
+      min-width: 0;
+      position: sticky;
+      top: 16px;
+      align-self: flex-start;
+      height: fit-content;
+    }
+
+    .layout-right {
+      flex: 1;
+      min-width: 280px;
+      max-width: 420px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .control-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .slider-row span.label {
+      width: 4.8rem;
+      opacity: 0.9;
+    }
+
+    input[type="color"] {
+      width: 60px;
+      height: 30px;
+      padding: 0;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    /* すべての range スライダー共通の見た目（ミニマルなバー＋丸いノブ） */
+    input[type="range"] {
+      box-sizing: border-box;
+      width: 100%;
+      flex: 1;
+      background: transparent;
+      cursor: pointer;
+      -webkit-appearance: none; /* Chrome / Safari */
+      appearance: none;
+    }
+
+    input[type="range"]:focus {
+      outline: none;
+    }
+
+    /* WebKit (Chrome / Safari) track */
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 999px;
+    }
+
+    /* Firefox track */
+    input[type="range"]::-moz-range-track {
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 999px;
+    }
+
+    /* IE/Edge legacy track (透明にしておく) */
+    input[type="range"]::-ms-track {
+      height: 4px;
+      background: transparent;
+      border-color: transparent;
+      color: transparent;
+    }
+
+    /* 共通ノブ（thumb） */
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background-color: #16a085; /* ノブの色 */
+      border: 2px solid #ffffff; /* 枠線 */
+      margin-top: -5px; /* トラック高さ4px分に合わせて中央にくるよう調整 */
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background-color: #16a085;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-ms-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background-color: #16a085;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+    }
+
+    /* hover / active 時の枠線を少し強調 */
+    input[type="range"]:hover::-webkit-slider-thumb,
+    input[type="range"]:hover::-moz-range-thumb,
+    input[type="range"]:hover::-ms-thumb {
+      border-color: rgba(255,255,255,0.9);
+    }
+
+    input[type="range"]:active::-webkit-slider-thumb,
+    input[type="range"]:active::-moz-range-thumb,
+    input[type="range"]:active::-ms-thumb {
+      border-color: #ffffff;
+    }
+
+    /* ========== 中央ガイド付きスライダー用（cropX, cropY, textX, textY） ========== */
+    /* center-mark クラスが付いているものだけ、トラック中央に細いラインを追加 */
+
+    input[type="range"].center-mark::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(
+        to right,
+        rgba(255,255,255,0.3) 0%,
+        rgba(255,255,255,0.3) 49%,
+        rgba(255,255,255,0.9) 49.5%,  /* 中央の細い線 */
+        rgba(255,255,255,0.9) 50.5%,
+        rgba(255,255,255,0.3) 51%,
+        rgba(255,255,255,0.3) 100%
+      );
+    }
+
+    input[type="range"].center-mark::-moz-range-track {
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(
+        to right,
+        rgba(255,255,255,0.3) 0%,
+        rgba(255,255,255,0.3) 49%,
+        rgba(255,255,255,0.9) 49.5%,
+        rgba(255,255,255,0.9) 50.5%,
+        rgba(255,255,255,0.3) 51%,
+        rgba(255,255,255,0.3) 100%
+      );
+    }
+
+    /* プリセットボタン */
+    .preset-row,
+    .text-pos-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .preset-btn,
+    .text-pos-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.03);
+      color: #f5f5f5;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+    }
+
+    .preset-btn:hover,
+    .text-pos-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .preset-btn:active,
+    .text-pos-btn:active {
+      transform: scale(0.97);
+    }
+
+    .preset-btn.is-active,
+    .text-pos-btn.is-active {
+      background: rgba(74, 222, 128, 0.12);
+      border-color: #4ade80;
+    }
+
+    @media (max-width: 800px) {
+      .layout {
+        flex-direction: column;
+      }
+      .layout-right {
+        max-width: none;
+      }
+      .layout-left {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>ジャケットメーカー（ベータ）</h1>
+
+  <!-- 画像選択 -->
+  <div class="panel">
+    <div class="panel-title">① 画像を選ぶ</div>
+    <input type="file" id="fileInput" accept="image/*" />
+    <p class="note">
+      正方形にトリミングして、中央シャープ＋外側ぼかし、フレームやテキストまで調整できます。
+    </p>
+  </div>
+
+  <div class="layout">
+    <!-- 左：プレビュー -->
+    <div class="layout-left">
+      <div class="panel">
+        <div class="panel-title">プレビュー</div>
+        <canvas id="canvas" width="1080" height="1080"></canvas>
+        <button id="downloadBtn" disabled style="margin-top: 12px;">PNGをダウンロード</button>
+      </div>
+    </div>
+
+    <!-- 右：コントロール -->
+    <div class="layout-right">
+      <!-- 出力 & フレーム設定 -->
+      <div class="panel">
+        <div class="panel-title">② 出力 & フレーム設定</div>
+        <div class="controls-grid">
+          <div class="control-block">
+            <label for="sizeSelect">出力サイズ</label>
+            <select id="sizeSelect">
+              <option value="1080">1080 x 1080（SNS向け）</option>
+              <option value="1600">1600 x 1600</option>
+              <option value="2000">2000 x 2000</option>
+            </select>
+          </div>
+
+          <div class="control-block">
+            <label for="frameSelect">フレーム種類</label>
+            <select id="frameSelect">
+              <option value="simple">シンプル枠</option>
+              <option value="none">枠なし</option>
+            </select>
+          </div>
+
+          <div class="control-block">
+            <label for="frameColor">フレーム色</label>
+            <input type="color" id="frameColor" value="#ffffff" />
+          </div>
+
+          <div class="control-block">
+            <div class="slider-group">
+              <div class="slider-row">
+                <span class="label">枠の太さ</span>
+                <input type="range" id="frameWidth" min="0" max="100" value="0" />
+              </div>
+              <div class="slider-row">
+                <span class="label">枠の内側</span>
+                <input type="range" id="frameOffset" min="0" max="100" value="30" />
+              </div>
+              <div class="slider-row">
+                <span class="label">角丸</span>
+                <input type="range" id="frameRadius" min="0" max="100" value="0" />
+              </div>
+              <div class="slider-row">
+                <span class="label">枠透明度</span>
+                <input type="range" id="frameOpacity" min="0" max="100" value="100" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- トリミング & ズーム -->
+      <div class="panel">
+        <div class="panel-title">③ トリミング & ズーム</div>
+        <div class="slider-group">
+          <div class="slider-row">
+            <span class="label">左右位置</span>
+            <input type="range" id="cropX" class="center-mark" min="0" max="100" value="50" />
+          </div>
+          <div class="slider-row">
+            <span class="label">上下位置</span>
+            <input type="range" id="cropY" class="center-mark" min="0" max="100" value="50" />
+          </div>
+          <div class="slider-row">
+            <span class="label">ズーム</span>
+            <input type="range" id="zoom" min="100" max="250" value="100" />
+          </div>
+        </div>
+        <p class="note">
+          左右・上下位置は、画像の端から端まで動きます。中央付近では自動で真ん中にスナップします。
+        </p>
+      </div>
+
+      <!-- エフェクト & 外側の見え方 -->
+      <div class="panel">
+        <div class="panel-title">④ エフェクト & 外側の見え方</div>
+        <div class="controls-grid">
+          <div class="control-block">
+            <label for="filterSelect">カラー・質感</label>
+            <select id="filterSelect">
+              <option value="none">なし</option>
+              <option value="soft">ソフト</option>
+              <option value="hard">ハード</option>
+              <option value="mono">モノクロ寄り</option>
+            </select>
+          </div>
+
+          <div class="control-block">
+            <div class="slider-group">
+              <div class="slider-row">
+                <span class="label">外側ぼかし</span>
+                <input type="range" id="blurAmount" min="0" max="20" value="6" />
+              </div>
+              <div class="slider-row">
+                <span class="label">外側ズーム</span>
+                <input type="range" id="outerScale" min="0" max="40" value="0" />
+              </div>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <label>
+              <input type="checkbox" id="showGrid" />
+              ガイド線（3分割）を表示
+            </label>
+          </div>
+        </div>
+        <p class="note">
+          「外側ズーム」を0にすると、内側と外側のスケールが揃い、枠を乗せただけの自然な見え方になります。
+        </p>
+      </div>
+
+      <!-- テキスト（タイトル & アーティスト） -->
+      <div class="panel">
+        <div class="panel-title">⑤ テキスト（タイトル & アーティスト）</div>
+        <div class="controls-grid">
+          <div class="control-block">
+            <label for="textTitle">タイトル</label>
+            <input type="text" id="textTitle" placeholder="曲のタイトル" />
+          </div>
+          <div class="control-block">
+            <label for="textArtist">アーティスト</label>
+            <input type="text" id="textArtist" placeholder="アーティスト名" />
+          </div>
+
+          <div class="control-block">
+            <label for="fontSelect">フォント</label>
+            <select id="fontSelect">
+              <option value="system">システム（デフォルト）</option>
+              <option value="notoSans">Noto Sans JP（日本語ゴシック）</option>
+              <option value="mPlusRounded">M PLUS Rounded 1c（丸ゴシック）</option>
+              <option value="shippori">Shippori Antique B1（アンティーク風）</option>
+              <option value="sans">汎用ゴシック（sans-serif）</option>
+              <option value="serif">汎用明朝（serif）</option>
+              <option value="mono">等幅（monospace）</option>
+              <option value="cursive">手書き風（cursive）</option>
+              <option value="impact">タイトル用（Impact系）</option>
+            </select>
+          </div>
+
+          <div class="control-block">
+            <label for="customFont">カスタムフォント名（任意）</label>
+            <input type="text" id="customFont" placeholder="例: Noto Sans JP" />
+            <p class="note">ここに入力がある場合、この名前をそのままフォントとして使います（CSSのfont-family名）。</p>
+          </div>
+
+          <div class="control-block">
+            <div class="slider-group">
+              <div class="slider-row">
+                <span class="label">文字サイズ</span>
+                <input type="range" id="textSize" min="20" max="160" value="40" />
+              </div>
+              <div class="slider-row">
+                <span class="label">X位置</span>
+                <input type="range" id="textX" class="center-mark" min="0" max="100" value="50" />
+              </div>
+              <div class="slider-row">
+                <span class="label">Y位置</span>
+                <input type="range" id="textY" class="center-mark" min="0" max="100" value="80" />
+              </div>
+              <div class="slider-row">
+                <span class="label">文字色</span>
+                <input type="color" id="textColor" value="#ffffff" />
+              </div>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <label>テキスト位置プリセット</label>
+            <div class="text-pos-row">
+              <button type="button" class="text-pos-btn" data-pos="topLeft">左上</button>
+              <button type="button" class="text-pos-btn" data-pos="top">上中央</button>
+              <button type="button" class="text-pos-btn" data-pos="topRight">右上</button>
+              <button type="button" class="text-pos-btn" data-pos="middleLeft">左中央</button>
+              <button type="button" class="text-pos-btn" data-pos="center">中央</button>
+              <button type="button" class="text-pos-btn" data-pos="middleRight">右中央</button>
+              <button type="button" class="text-pos-btn" data-pos="bottomLeft">左下</button>
+              <button type="button" class="text-pos-btn" data-pos="bottom">下中央</button>
+              <button type="button" class="text-pos-btn" data-pos="bottomRight">右下</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- レイアウトプリセット -->
+      <div class="panel">
+        <div class="panel-title">⑥ レイアウトプリセット</div>
+        <div class="preset-row">
+          <button type="button" class="preset-btn" data-preset="cleanCenter">
+            シンプル中央
+          </button>
+          <button type="button" class="preset-btn" data-preset="photoFocus">
+            写真メイン
+          </button>
+          <button type="button" class="preset-btn" data-preset="bottomTitle">
+            下寄せタイトル
+          </button>
+        </div>
+        <p class="note">
+          プリセットを押してから、細かい位置はスライダーで微調整すると楽です。
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 要素取得
+    const fileInput     = document.getElementById('fileInput');
+    const sizeSelect    = document.getElementById('sizeSelect');
+    const frameSelect   = document.getElementById('frameSelect');
+    const frameColorEl  = document.getElementById('frameColor');
+    const frameWidthEl  = document.getElementById('frameWidth');
+    const frameOffsetEl = document.getElementById('frameOffset');
+    const frameRadiusEl = document.getElementById('frameRadius');
+    const frameOpacityEl= document.getElementById('frameOpacity');
+    const filterSelect  = document.getElementById('filterSelect');
+    const blurAmountEl  = document.getElementById('blurAmount');
+    const outerScaleEl  = document.getElementById('outerScale');
+    const showGridEl    = document.getElementById('showGrid');
+    const cropXEl       = document.getElementById('cropX');
+    const cropYEl       = document.getElementById('cropY');
+    const zoomSlider    = document.getElementById('zoom');
+    const textTitleEl   = document.getElementById('textTitle');
+    const textArtistEl  = document.getElementById('textArtist');
+    const fontSelect    = document.getElementById('fontSelect');
+    const customFontEl  = document.getElementById('customFont');
+    const textSizeEl    = document.getElementById('textSize');
+    const textXEl       = document.getElementById('textX');
+    const textYEl       = document.getElementById('textY');
+    const textColorEl   = document.getElementById('textColor');
+    const downloadBtn   = document.getElementById('downloadBtn');
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    const textPosButtons= document.querySelectorAll('.text-pos-btn');
+    const canvas        = document.getElementById('canvas');
+    const ctx           = canvas.getContext('2d');
+
+    const img = new Image();
+    let imageLoaded = false;
+
+    img.onload = function() {
+      imageLoaded = true;
+      updateCenterSnap();
+      redraw();
+      downloadBtn.disabled = false;
+    };
+
+    fileInput.addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // すべてのコントロールで redraw + 中央スナップ
+    [
+      sizeSelect, frameSelect, frameColorEl, frameWidthEl,
+      frameOffsetEl, frameRadiusEl, frameOpacityEl, filterSelect,
+      blurAmountEl, outerScaleEl, cropXEl, cropYEl, zoomSlider,
+      textTitleEl, textArtistEl, fontSelect, customFontEl, textSizeEl, textXEl, textYEl, textColorEl,
+      showGridEl
+    ].forEach(el => el.addEventListener('input', () => {
+      updateCenterSnap();
+      redraw();
+    }));
+
+    // レイアウトプリセット
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.preset;
+        presetButtons.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        applyLayoutPreset(name);
+      });
+    });
+
+    // テキスト位置プリセット
+    textPosButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pos = btn.dataset.pos;
+        textPosButtons.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        applyTextPositionPreset(pos);
+      });
+    });
+
+    // フィルタープリセット（ぼかし抜きのベース）
+    function getBaseFilter(style) {
+      if (style === 'soft') {
+        return 'contrast(108%) saturate(110%)';
+      }
+      if (style === 'hard') {
+        return 'contrast(130%) saturate(130%)';
+      }
+      if (style === 'mono') {
+        return 'grayscale(85%) contrast(115%)';
+      }
+      return 'none';
+    }
+
+    // blurとベースフィルターを合成
+    function buildFilter(base, blurPx, includeBlur) {
+      const parts = [];
+      if (includeBlur && blurPx > 0) {
+        parts.push(`blur(${blurPx}px)`);
+      }
+      if (base && base !== 'none') {
+        parts.push(base);
+      }
+      return parts.join(' ') || 'none';
+    }
+
+    // 角丸矩形パス
+    function roundedRectPath(ctx, x, y, w, h, r) {
+      const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    // フォントキー → 実際のフォントファミリ（日本語対応）＋カスタム
+    function resolveFontFamily(key) {
+      // カスタムフォント名が入力されていればそれを最優先で使う
+      if (customFontEl && customFontEl.value.trim()) {
+        return customFontEl.value.trim();
+      }
+
+      switch (key) {
+        case 'system':
+          return 'system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
+        case 'notoSans':
+          return '"Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", Meiryo, sans-serif';
+        case 'mPlusRounded':
+          return '"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", Meiryo, sans-serif';
+        case 'shippori':
+          return '"Shippori Antique B1", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
+        case 'sans':
+          return 'Helvetica, Arial, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
+        case 'serif':
+          return '"Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", serif';
+        case 'mono':
+          return 'Menlo, Consolas, Monaco, "Roboto Mono", "MS Gothic", monospace';
+        case 'cursive':
+          return '"Comic Sans MS", "Comic Neue", "Yu Gothic", cursive';
+        case 'impact':
+          return 'Impact, "Anton", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
+        default:
+          return 'system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
+      }
+    }
+
+    // 中央スナップ
+    function handleCenterSnap(slider) {
+      let v = parseInt(slider.value, 10);
+      const dist = Math.abs(v - 50);
+      if (dist <= 2) {
+        slider.value = 50;
+      }
+    }
+
+    function updateCenterSnap() {
+      handleCenterSnap(cropXEl);
+      handleCenterSnap(cropYEl);
+      handleCenterSnap(textXEl);
+      handleCenterSnap(textYEl);
+    }
+
+    // レイアウトプリセット（ここをいじれば自分好みにできる）
+    function applyLayoutPreset(name) {
+      switch (name) {
+        case 'cleanCenter':
+          frameSelect.value    = 'simple';
+          frameColorEl.value   = '#ffffff';
+          frameWidthEl.value   = 40;
+          frameOffsetEl.value  = 30;
+          frameRadiusEl.value  = 20;
+          frameOpacityEl.value = 100;
+
+          filterSelect.value   = 'soft';
+          blurAmountEl.value   = 4;
+          outerScaleEl.value   = 0;
+          zoomSlider.value     = 110;
+
+          cropXEl.value = 50;
+          cropYEl.value = 50;
+
+          textXEl.value = 50;
+          textYEl.value = 80;
+          break;
+
+        case 'photoFocus':
+          frameSelect.value    = 'simple';
+          frameColorEl.value   = '#ffffff';
+          frameWidthEl.value   = 25;
+          frameOffsetEl.value  = 20;
+          frameRadiusEl.value  = 10;
+          frameOpacityEl.value = 80;
+
+          filterSelect.value   = 'hard';
+          blurAmountEl.value   = 8;
+          outerScaleEl.value   = 12;
+          zoomSlider.value     = 140;
+
+          cropXEl.value = 50;
+          cropYEl.value = 45;
+
+          textXEl.value = 50;
+          textYEl.value = 85;
+          break;
+
+        case 'bottomTitle':
+          frameSelect.value    = 'simple';
+          frameColorEl.value   = '#ffffff';
+          frameWidthEl.value   = 35;
+          frameOffsetEl.value  = 35;
+          frameRadiusEl.value  = 18;
+          frameOpacityEl.value = 100;
+
+          filterSelect.value   = 'soft';
+          blurAmountEl.value   = 6;
+          outerScaleEl.value   = 0;
+          zoomSlider.value     = 120;
+
+          cropXEl.value = 50;
+          cropYEl.value = 40;
+
+          textXEl.value = 50;
+          textYEl.value = 88;
+          break;
+      }
+      updateCenterSnap();
+      redraw();
+    }
+
+    // テキスト位置プリセット
+    function applyTextPositionPreset(pos) {
+      switch (pos) {
+        case 'topLeft':
+          textXEl.value = 22;
+          textYEl.value = 18;
+          break;
+        case 'top':
+          textXEl.value = 50;
+          textYEl.value = 18;
+          break;
+        case 'topRight':
+          textXEl.value = 78;
+          textYEl.value = 18;
+          break;
+        case 'middleLeft':
+          textXEl.value = 22;
+          textYEl.value = 50;
+          break;
+        case 'center':
+          textXEl.value = 50;
+          textYEl.value = 50;
+          break;
+        case 'middleRight':
+          textXEl.value = 78;
+          textYEl.value = 50;
+          break;
+        case 'bottomLeft':
+          textXEl.value = 22;
+          textYEl.value = 82;
+          break;
+        case 'bottom':
+          textXEl.value = 50;
+          textYEl.value = 82;
+          break;
+        case 'bottomRight':
+          textXEl.value = 78;
+          textYEl.value = 82;
+          break;
+      }
+      updateCenterSnap();
+      redraw();
+    }
+
+    // ガイド線（3分割）
+    function drawGrid(size) {
+      if (!showGridEl || !showGridEl.checked) return;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = size * 0.003;
+
+      const third = size / 3;
+
+      // 縦線
+      for (let i = 1; i <= 2; i++) {
+        const x = third * i;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, size);
+        ctx.stroke();
+      }
+
+      // 横線
+      for (let i = 1; i <= 2; i++) {
+        const y = third * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(size, y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function redraw() {
+      if (!imageLoaded) return;
+
+      const size = parseInt(sizeSelect.value, 10);
+      canvas.width = size;
+      canvas.height = size;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, size, size);
+
+      const xPercent = parseFloat(cropXEl.value) / 100;
+      const yPercent = parseFloat(cropYEl.value) / 100;
+      const zoom     = parseFloat(zoomSlider.value) / 100;
+
+      const baseSquare = Math.min(img.width, img.height);
+      const cropSizeInner = baseSquare / zoom;
+      const outerScaleFactor = parseFloat(outerScaleEl.value) / 100;
+      const cropSizeOuter = baseSquare / (zoom * (1 + outerScaleFactor || 0));
+
+      const maxOffsetXInner = Math.max(0, img.width  - cropSizeInner);
+      const maxOffsetYInner = Math.max(0, img.height - cropSizeInner);
+
+      let sxInner = maxOffsetXInner * xPercent;
+      let syInner = maxOffsetYInner * yPercent;
+
+      let centerX = sxInner + cropSizeInner / 2;
+      let centerY = syInner + cropSizeInner / 2;
+
+      let sxOuter = centerX - cropSizeOuter / 2;
+      let syOuter = centerY - cropSizeOuter / 2;
+
+      sxInner = Math.max(0, Math.min(sxInner, img.width  - cropSizeInner));
+      syInner = Math.max(0, Math.min(syInner, img.height - cropSizeInner));
+      sxOuter = Math.max(0, Math.min(sxOuter, img.width  - cropSizeOuter));
+      syOuter = Math.max(0, Math.min(syOuter, img.height - cropSizeOuter));
+
+      const filterStyle = filterSelect.value;
+      const baseFilter  = getBaseFilter(filterStyle);
+      const blurPx      = parseInt(blurAmountEl.value, 10);
+
+      // ① 外側ぼかし
+      ctx.filter = buildFilter(baseFilter, blurPx, true);
+      ctx.drawImage(
+        img,
+        sxOuter, syOuter, cropSizeOuter, cropSizeOuter,
+        0, 0, size, size
+      );
+
+      // ② 中央シャープ領域
+      const offsetScale = parseInt(frameOffsetEl.value, 10) / 100;
+      const margin = size * (0.02 + offsetScale * 0.18);
+
+      const innerRectX = margin;
+      const innerRectY = margin;
+      const innerRectSize = size - margin * 2;
+
+      const radiusScale = parseInt(frameRadiusEl.value, 10) / 100;
+      const maxRadius   = innerRectSize * 0.25;
+      const cornerRadius = maxRadius * radiusScale;
+
+      ctx.save();
+      roundedRectPath(ctx, innerRectX, innerRectY, innerRectSize, innerRectSize, cornerRadius);
+      ctx.clip();
+
+      ctx.filter = buildFilter(baseFilter, 0, false);
+      ctx.drawImage(
+        img,
+        sxInner, syInner, cropSizeInner, cropSizeInner,
+        0, 0, size, size
+      );
+      ctx.restore();
+
+      // ③ フレーム
+      ctx.filter = 'none';
+      const frameWidthScale = parseInt(frameWidthEl.value, 10) / 100;
+      const frameColor = frameColorEl.value;
+      drawFrame(
+        size,
+        frameSelect.value,
+        innerRectX,
+        innerRectY,
+        innerRectSize,
+        innerRectSize,
+        frameWidthScale,
+        cornerRadius,
+        frameColor
+      );
+
+      // ガイド線（お好み）
+      drawGrid(size);
+
+      // ④ テキスト
+      drawText(size);
+    }
+
+    function drawFrame(size, style, x, y, w, h, scale, radius, color) {
+      if (style === 'none') return;
+
+      const opacity = parseInt(frameOpacityEl.value, 10) / 100;
+      const [r, g, b] = [
+        parseInt(color.slice(1, 3), 16),
+        parseInt(color.slice(3, 5), 16),
+        parseInt(color.slice(5, 7), 16),
+      ];
+      const rgbaColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+
+      const minWidth   = size * 0.002;
+      const extraWidth = size * 0.028;
+      const lineWidth  = minWidth + extraWidth * scale;
+
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = rgbaColor;
+      roundedRectPath(ctx, x, y, w, h, radius);
+      ctx.stroke();
+    }
+
+    function drawText(size) {
+      const title  = textTitleEl.value.trim();
+      const artist = textArtistEl.value.trim();
+      if (!title && !artist) return;
+
+      const baseFontSize = parseInt(textSizeEl.value, 10);
+      const xPerc = parseInt(textXEl.value, 10) / 100;
+      const yPerc = parseInt(textYEl.value, 10) / 100;
+      const textColor = textColorEl.value;
+      const fontFamily = resolveFontFamily(fontSelect.value);
+
+      const posX = size * xPerc;
+      const posY = size * yPerc;
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+
+      const [r, g, b] = [
+        parseInt(textColor.slice(1, 3), 16),
+        parseInt(textColor.slice(3, 5), 16),
+        parseInt(textColor.slice(5, 7), 16),
+      ];
+      const titleColor  = `rgba(${r}, ${g}, ${b}, 0.98)`;
+      const artistColor = `rgba(${r}, ${g}, ${b}, 0.85)`;
+
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur  = size * 0.01;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = size * 0.004;
+
+      const titleFontPx  = (baseFontSize / 1080) * size;
+      const artistFontPx = titleFontPx * 0.7;
+
+      if (title) {
+        ctx.font = `600 ${titleFontPx}px ${fontFamily}`;
+        ctx.fillStyle = titleColor;
+        ctx.fillText(title, posX, posY);
+      }
+
+      if (artist) {
+        ctx.font = `400 ${artistFontPx}px ${fontFamily}`;
+        ctx.fillStyle = artistColor;
+        ctx.fillText(artist, posX, posY + artistFontPx * 1.2);
+      }
+
+      ctx.restore();
+    }
+
+    downloadBtn.addEventListener('click', function () {
+      if (!imageLoaded) return;
+      const link = document.createElement('a');
+      link.download = 'jacket.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  </script>
+</body>
+</html>
