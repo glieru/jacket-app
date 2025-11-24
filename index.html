@@ -373,6 +373,7 @@
   <div class="panel">
     <div class="panel-title">① 画像を選ぶ</div>
     <input type="file" id="fileInput" accept="image/*" />
+    <button type="button" id="generateArtBtn">背景をランダム生成する</button>
     <p class="note">
       正方形にトリミングして、中央シャープ＋外側ぼかし、フレームやテキストまで調整できます。
     </p>
@@ -624,6 +625,7 @@
     const textPosButtons= document.querySelectorAll('.text-pos-btn');
     const canvas        = document.getElementById('canvas');
     const ctx           = canvas.getContext('2d');
+    const generateArtBtn = document.getElementById('generateArtBtn');
 
     const img = new Image();
     let imageLoaded = false;
@@ -1073,6 +1075,46 @@
 
       ctx.restore();
     }
+
+
+    // ランダム背景生成ボタン
+    function generateRandomArt() {
+      const size = 1080;
+      const off = document.createElement('canvas');
+      off.width = size;
+      off.height = size;
+      const g = off.getContext('2d');
+
+      // グラデーションのカラーパレット候補（Granim.js のデモ風）
+      const palettes = [
+        ['#ff9966', '#ff5e62'], // warm
+        ['#00F260', '#0575E6'], // green → blue
+        ['#e1eec3', '#f05053'], // soft → red
+        ['#8360c3', '#2ebf91'], // purple → teal
+        ['#f7971e', '#ffd200']  // orange → yellow
+      ];
+
+      const palette = palettes[Math.floor(Math.random() * palettes.length)];
+      const [c1, c2] = palette;
+
+      // 左 → 右 のシンプルな線形グラデーション
+      const grad = g.createLinearGradient(0, size * 0.5, size, size * 0.5);
+      grad.addColorStop(0, c1);
+      grad.addColorStop(1, c2);
+
+      g.fillStyle = grad;
+      g.fillRect(0, 0, size, size);
+
+      // 生成されたグラデーションを img に流し込む
+      img.src = off.toDataURL('image/png');
+    }
+
+    generateRandomArt();
+
+    generateArtBtn.addEventListener('click', () => {
+      if (fileInput) fileInput.value = '';
+      generateRandomArt();
+    });
 
     downloadBtn.addEventListener('click', function () {
       if (!imageLoaded) return;
