@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Glieru | Music</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;600&family=Noto+Sans+JP:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #4ade80;
+      --bg: #050608;
+      --panel: #111318;
+      --panel-soft: #181b22;
+      --text-main: #f5f5f5;
+      --text-sub: #b3b3b3;
+      --border-soft: rgba(255,255,255,0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+        "Noto Sans JP", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      margin: 0;
+      padding: 0 16px 40px;
+      background: radial-gradient(circle at top, #1f2933 0, #050608 55%);
+      color: var(--text-main);
+      max-width: 1100px;
+      margin-inline: auto;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Header */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 8px;
+      gap: 12px;
+    }
+
+    .site-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .site-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .nav-link {
+      font-size: 0.85rem;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+      white-space: nowrap;
+    }
+
+    .nav-link span.icon { font-size: 0.85rem; }
+
+    .nav-link:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .nav-link:active { transform: scale(0.97); }
+
+    /* Hero */
+    .hero {
+      margin-top: 8px;
+      padding: 20px 18px 18px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(74,222,128,0.1), rgba(56,189,248,0.05));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 26px 60px rgba(0,0,0,0.6);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+
+    .hero-title {
+      font-size: 1.6rem;
+      margin: 0 0 6px;
+    }
+
+    /* Sections */
+    .section { margin-top: 24px; }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+
+    .section-note {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+
+    /* YouTube wrapper */
+    .youtube-wrapper {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 14px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.6);
+    }
+
+    .youtube-title {
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .youtube-iframe-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      margin-top: 6px;
+    }
+
+    .youtube-iframe-wrap iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .yt-featured-thumb {
+      position: absolute;
+      inset: 0;
+      display: block;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .yt-featured-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .yt-play-badge {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* Track cards: horizontal scroll */
+    .track-grid {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 14px;
+      margin-top: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+    }
+
+    .track-card {
+      background: var(--panel-soft);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 230px;
+      max-width: 280px;
+      scroll-snap-align: start;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      position: relative;
+      z-index: 0;
+    }
+
+    .track-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 35px rgba(0, 0, 0, 0.6);
+      z-index: 2;
+    }
+
+    .track-thumb {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16 / 9;
+      margin-bottom: 6px;
+    }
+
+    .track-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .track-tag {
+      font-size: 0.7rem;
+      color: var(--text-sub);
+      opacity: 0.9;
+    }
+
+    .track-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .track-desc {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    .track-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      font-size: 0.8rem;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.15s ease, transform 0.05s ease, opacity 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #111;
+    }
+
+    .btn-ghost {
+      background: rgba(0,0,0,0.3);
+      color: var(--text-main);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.97); }
+
+    /* X / Twitter cards */
+    .post-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .post-card {
+      background: var(--panel-soft);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      border: 1px solid var(--border-soft);
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .post-meta {
+      color: var(--text-sub);
+      font-size: 0.75rem;
+    }
+
+    .post-link {
+      font-size: 0.8rem;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    footer {
+      margin-top: 28px;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      text-align: right;
+      opacity: 0.7;
+    }
+
+    @media (max-width: 720px) {
+      .site-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .nav-link {
+        align-self: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <div class="site-title">Glieru</div>
+      <div class="site-subtitle">Beats for everyday boosts & midnight confidence.</div>
+    </div>
+    <a href="index.html" class="nav-link">
+      <span class="icon">⬅</span>
+      Jacket Maker
+    </a>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-tag">
+      <span>●</span>
+      <span>Original Tracks & Visuals</span>
+    </div>
+    <h1 class="hero-title">Music & Visual Art for Your World</h1>
+  </section>
+
+  <!-- YouTube section -->
+  <section class="section">
+    <div class="section-title">YouTube</div>
+    <p class="section-note">Original tracks on YouTube.</p>
+
+    <div class="track-grid" id="youtube-video-grid"></div>
+
+    <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+      <a
+        class="btn btn-ghost"
+        href="https://www.youtube.com/@glieru8626"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ▶ Open YouTube channel
+      </a>
+    </div>
+  </section>
+
+  <!-- Spotify / Album Player section -->
+  <section class="section">
+    <div class="section-title">Spotify Album</div>
+    <p class="section-note">Listen to the album directly on Spotify.</p>
+    <div class="youtube-wrapper">
+      <div class="youtube-title">Album Player</div>
+      <div style="margin-top:8px; border-radius:16px; overflow:hidden;">
+        <!-- Replace with your own album embed URL -->
+        <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/75WgH4e1EHIfSUNDuUKbNr?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/3aFOXX8kzIlKGo5zP3De9k?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/65XFaYpmKRSGi4TsipeJKE?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/7lEHIBjmssOmWwSkRo8cT9?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/0FRxyQbAuhpCCoMdvrqvvc?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5TCBV6fjUvEd1ydItPqKZn?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+        <div style="margin-top:16px;">
+          <iframe style="border-radius:12px" src="https://open.spotify.com/embed/album/3fPGn1MuSNMe6IT8kFEluF?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Streaming / DistroKid section -->
+  <section class="section">
+    <div class="section-title">Streaming</div>
+    <p class="section-note">Stream on your favorite platform.</p>
+    <div class="youtube-wrapper" style="padding: 14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <div>
+        <div class="youtube-title">DistroKid Hyperfollow</div>
+        <p class="section-note" style="margin-bottom:0;">
+          One link to jump to each streaming service.
+        </p>
+      </div>
+      <a
+        class="btn btn-primary"
+        href="https://distrokid.com/hyperfollow/gli11/gallery"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        🎧 Open streaming links
+      </a>
+    </div>
+  </section>
+
+
+  <!-- X / Twitter section -->
+  <section class="section">
+    <div class="section-title">X (Twitter)</div>
+    <p class="section-note">Highlighted posts from X (Twitter).</p>
+    <p class="section-note">For contact or inquiries, please message me on X.</p>
+
+    <div class="post-grid">
+      <!-- Post 1 -->
+      <article class="post-card">
+        <div class="post-meta">@glieru · Process log</div>
+        <div>
+          A thread talking about bassline ideas and production notes.
+        </div>
+        <a
+          class="post-link"
+          href="https://x.com/glieru"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open post →
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    © <span id="year"></span> Glieru
+  </footer>
+
+  <script>
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // YouTube video list for the YouTube section
+    // Fill in title / desc / published (YYYY-MM-DD) as you like
+    const youtubeVideos = [
+      {
+        id: "ZRstZGgKfa4",
+        title: "とーすと feat.初音ミク",
+        desc: "",
+        tag: "YouTube",
+        published: "20221016"
+      },
+      {
+        id: "zsqX_ICunOo",
+        title: "Futakuchi feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20251031"
+      },
+      {
+        id: "74QdkuTegbY",
+        title: "カプセル feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20250704"
+      },
+      {
+        id: "JHootIAjwSA",
+        title: "飛翔 feat.Yuma",
+        desc: "",
+        tag: "YouTube",
+        published: "20250425"
+      },
+      {
+        id: "9VfYbSNTEcw",
+        title: "ながれぼし feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20250412"
+      },
+      {
+        id: "98tSUWCTLGA",
+        title: "バニラアイスfeat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20250404"
+      },
+      {
+        id: "vUxrMnI6A1w",
+        title: "A Summer Apart feat.重音テト",
+        desc: "",
+        tag: "YouTube",
+        published: "20240921"
+      },
+      {
+        id: "sjbkZY4Cnt0",
+        title: "Balmy Day feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20240727"
+      },
+      {
+        id: "p60sIur_D-0",
+        title: "まえのゆめ feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20240302"
+      },
+      {
+        id: "9g-wnOBCe6U",
+        title: "SOGGY feat.可不",
+        desc: "",
+        tag: "YouTube",
+        published: "20230812"
+      },
+      {
+        id: "F3CNuz9cE3U",
+        title: "白鯨 feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20230506"
+      },
+      {
+        id: "5U-aTqJh0Q8",
+        title: "Rooibos feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20230319"
+      },
+      {
+        id: "w4BfKhBUd9Q",
+        title: "Shampoo feat.Mai",
+        desc: "",
+        tag: "YouTube",
+        published: "20230212"
+      },
+      {
+        id: "WGGST-grWtY",
+        title: "Make up feat.初音ミク",
+        desc: "",
+        tag: "YouTube",
+        published: "20230122"
+      },
+      {
+        id: "5T2JcDWVLUM",
+        title: "いつかのてがみ feat.初音ミク",
+        desc: "",
+        tag: "YouTube",
+        published: "20221231"
+      },
+      {
+        id: "632XMpIJzPs",
+        title: "常夏の夢 feat.初音ミク",
+        desc: "",
+        tag: "YouTube",
+        published: "20221029"
+      },
+      {
+        id: "jL_hTGUc4ho",
+        title: "アメノチ feat.初音ミク",
+        desc: "",
+        tag: "YouTube",
+        published: "20221022"
+      },
+      {
+        id: "539nwRU5k3I",
+        title: "AIIRO - GLI -feat.Sayolla",
+        desc: "",
+        tag: "YouTube",
+        published: "20210417"
+      }
+    ];
+
+    const youtubeVideoGrid = document.getElementById("youtube-video-grid");
+
+    if (youtubeVideoGrid) {
+      // Sort by published date if provided (newest first)
+      const sortedVideos = [...youtubeVideos].sort((a, b) => {
+        if (!a.published && !b.published) return 0;
+        if (!a.published) return 1;
+        if (!b.published) return -1;
+        // If both dates are in YYYYMMDD format, compare as strings (newest first)
+        if (typeof a.published === 'string' && typeof b.published === 'string' && a.published.length === 8 && b.published.length === 8) {
+          return b.published.localeCompare(a.published);
+        }
+        // Fallback: try Date objects
+        return new Date(b.published) - new Date(a.published);
+      });
+
+      sortedVideos.forEach(video => {
+        const card = document.createElement("article");
+        card.className = "track-card";
+        card.innerHTML = `
+          <div class="track-tag">${video.tag}${video.published ? ' · ' + video.published : ''}</div>
+          <div class="track-title">${video.title}</div>
+          <div class="track-thumb">
+            <img src="https://img.youtube.com/vi/${video.id}/hqdefault.jpg" alt="${video.title} thumbnail" />
+          </div>
+          <p class="track-desc">${video.desc || ''}</p>
+          <div class="track-actions">
+            <a
+              class="btn btn-primary"
+              href="https://www.youtube.com/watch?v=${video.id}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ▶ Watch on YouTube
+            </a>
+          </div>
+        `;
+        youtubeVideoGrid.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
