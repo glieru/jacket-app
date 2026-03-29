@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLI - Liquid</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(270deg, #0a0a0a, #1a1a2e, #16213e, #0f3460);
+      background-size: 800% 800%;
+      animation: liquidBG 15s ease infinite;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    @keyframes liquidBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 48px;
+      margin-bottom: 8px;
+      letter-spacing: 4px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+      font-weight: normal;
+      opacity: 0.9;
+    }
+
+    p {
+      max-width: 480px;
+      line-height: 1.7;
+      opacity: 0.8;
+      margin-bottom: 28px;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 14px 28px;
+      margin: 8px;
+      border: 1px solid white;
+      color: white;
+      text-decoration: none;
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .button:hover {
+      background: white;
+      color: black;
+    }
+
+    .links {
+      margin-top: 12px;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 36px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        font-size: 14px;
+      }
+
+      .button {
+        width: 80%;
+        max-width: 280px;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>GLI</h1>
+    <h2>Liquid</h2>
+    <p>
+      NEO Y2Kの質感と、液体のように揺れるグルーヴ。
+      ここからGLIの音に触れてください。
+    </p>
+
+    <div class="links">
+      <a class="button" href="https://www.youtube.com/@glieru8626" target="_blank">YouTube</a>
+      <a class="button" href="https://x.com/glieru" target="_blank">X</a>
+      <a class="button" href="music.html">MUSIC</a>
+    </div>
+  </div>
+</body>
+</html>
