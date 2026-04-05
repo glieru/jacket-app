@@ -3,181 +3,706 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GLI - Liquid</title>
+  <title>GLI — Liquid</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(270deg, #000000, #06110a, #00130f, #000000);
-      background-size: 800% 800%;
-      animation: liquidBG 18s ease infinite;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
+    :root {
+      --green: #00ff66;
+      --green-dim: rgba(0,255,102,0.18);
+      --black: #000;
+      --white: #fff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      color: var(--white);
+      font-family: 'Space Mono', monospace;
       overflow-x: hidden;
-      position: relative;
-    }
-    @keyframes liquidBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
     }
 
-    .bg-image {
+    /* ── WebGL canvas ── */
+    #glCanvas {
       position: fixed;
-      inset: -10%;
-      background: url('M3 カット2.jpeg') center center / cover no-repeat;
-      opacity: 0.16;
-      filter: blur(26px) saturate(1.2);
-      transform: scale(1.08);
-      z-index: -3;
-      animation: bgFloat 22s ease-in-out infinite alternate;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
       pointer-events: none;
     }
 
-    .bg-glow {
+    /* ── grain overlay ── */
+    .grain {
       position: fixed;
       inset: 0;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(0, 255, 102, 0.16), transparent 32%),
-        radial-gradient(circle at 80% 30%, rgba(0, 255, 102, 0.10), transparent 28%),
-        radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.06), transparent 30%);
-      z-index: -2;
-      animation: glowMove 14s ease-in-out infinite alternate;
+      z-index: 1;
       pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px;
     }
 
-    .bg-grid {
+    /* ── grid ── */
+    .grid {
       position: fixed;
       inset: 0;
+      z-index: 2;
+      pointer-events: none;
       background-image:
-        linear-gradient(rgba(0,255,102,0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,102,0.08) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.95));
-      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.95));
-      z-index: -1;
-      opacity: 0.35;
+        linear-gradient(rgba(0,255,102,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,102,0.06) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    }
+
+    /* ── scanlines ── */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
       pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.08) 3px,
+        rgba(0,0,0,0.08) 4px
+      );
     }
 
-    @keyframes bgFloat {
-      0% {
-        transform: scale(1.08) translate(0px, 0px);
-      }
-      100% {
-        transform: scale(1.14) translate(-24px, -18px);
-      }
-    }
-
-    @keyframes glowMove {
-      0% {
-        transform: translate(0px, 0px) scale(1);
-      }
-      100% {
-        transform: translate(-12px, 18px) scale(1.08);
-      }
-    }
-
-    .wrap {
+    /* ── main layout ── */
+    .page {
+      position: relative;
+      z-index: 10;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      padding: 24px;
-      box-sizing: border-box;
+      justify-content: center;
+      padding: 60px 24px 80px;
+      gap: 0;
+    }
+
+    /* ── hero text ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeUp 1.2s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .artist-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(88px, 18vw, 180px);
+      letter-spacing: 0.06em;
+      line-height: 0.88;
+      color: var(--white);
+      text-shadow:
+        0 0 40px rgba(0,255,102,0.22),
+        0 0 120px rgba(0,255,102,0.08);
+      position: relative;
+      display: inline-block;
+    }
+
+    /* liquid shimmer on title */
+    .artist-name::after {
+      content: 'GLI';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(0,255,102,0.55) 50%, transparent 70%);
+      background-size: 250% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 4s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .release-label {
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--green);
+      opacity: 0.7;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .album-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 8vw, 72px);
+      letter-spacing: 0.18em;
+      color: var(--white);
+      opacity: 0.82;
+      line-height: 1;
+    }
+
+    .tagline {
+      margin-top: 20px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      line-height: 1.9;
+      opacity: 0.55;
+      max-width: 380px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── Spotify embed ── */
+    .spotify-wrap {
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 40px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(0,255,102,0.15),
+        0 0 60px rgba(0,255,102,0.08),
+        0 24px 48px rgba(0,0,0,0.7);
+      animation: fadeUp 1.4s 0.2s cubic-bezier(0.16,1,0.3,1) both;
       position: relative;
     }
 
-    h1 {
-      font-size: 48px;
-      margin-bottom: 8px;
-      letter-spacing: 4px;
-      text-shadow: 0 0 18px rgba(0, 255, 102, 0.28);
+    /* glowing border pulse */
+    .spotify-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 17px;
+      background: linear-gradient(135deg, rgba(0,255,102,0.4), transparent, rgba(0,255,102,0.2));
+      z-index: -1;
+      animation: borderPulse 3s ease-in-out infinite alternate;
     }
 
-    h2 {
-      font-size: 24px;
-      margin-bottom: 12px;
-      font-weight: normal;
-      opacity: 0.9;
-      text-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+    @keyframes borderPulse {
+      0%   { opacity: 0.4; }
+      100% { opacity: 1; }
     }
 
-    p {
-      max-width: 480px;
-      line-height: 1.7;
-      opacity: 0.9;
-      margin-bottom: 28px;
-      background: rgba(0, 0, 0, 0.18);
-      padding: 12px 16px;
+    .spotify-wrap iframe {
+      display: block;
+      width: 100%;
+      border: none;
+    }
+
+    /* ── placeholder (SpotifyのURLが未設定の場合に表示) ── */
+    .spotify-placeholder {
+      background: rgba(0,255,102,0.04);
+      border: 1px dashed rgba(0,255,102,0.3);
       border-radius: 16px;
-      backdrop-filter: blur(6px);
+      padding: 32px 24px;
+      text-align: center;
+      color: rgba(0,255,102,0.6);
+      font-size: 12px;
+      letter-spacing: 0.1em;
     }
 
-    .button {
-      display: inline-block;
-      padding: 14px 28px;
-      margin: 8px;
-      border: 1px solid #00ff66;
-      color: #00ff66;
-      text-decoration: none;
+    .spotify-placeholder .sp-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 12px;
+      opacity: 0.6;
+    }
+
+    /* ── download buttons ── */
+    .downloads {
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 36px;
+      animation: fadeUp 1.4s 0.35s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .downloads-label {
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--green);
+      opacity: 0.5;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .track-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(0,255,102,0.12);
+      border-radius: 10px;
+      backdrop-filter: blur(12px);
+      transition: all 0.22s ease;
+      gap: 12px;
+    }
+
+    .track-item:hover {
+      background: rgba(0,255,102,0.06);
+      border-color: rgba(0,255,102,0.35);
+      transform: translateX(4px);
+    }
+
+    .track-num {
+      font-size: 10px;
+      color: var(--green);
+      opacity: 0.5;
+      min-width: 20px;
+      letter-spacing: 0.08em;
+    }
+
+    .track-name {
+      flex: 1;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+    }
+
+    .dl-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid rgba(0,255,102,0.4);
       border-radius: 999px;
-      transition: 0.2s;
-      background: rgba(0, 0, 0, 0.28);
+      color: var(--green);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-decoration: none;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .dl-btn:hover {
+      background: var(--green);
+      color: #000;
+      box-shadow: 0 0 20px rgba(0,255,102,0.35);
+    }
+
+    .dl-btn svg { flex-shrink: 0; }
+
+    /* ── social links ── */
+    .socials {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 1.4s 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .soc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      color: rgba(255,255,255,0.7);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      background: rgba(0,0,0,0.35);
       backdrop-filter: blur(8px);
-      box-shadow: 0 0 18px rgba(0, 255, 102, 0.12);
+      transition: all 0.2s ease;
     }
 
-    .button:hover {
-      background: #00ff66;
-      color: black;
-      box-shadow: 0 0 28px rgba(0, 255, 102, 0.4);
+    .soc-btn:hover {
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 0 18px rgba(0,255,102,0.2);
     }
 
-    .links {
-      margin-top: 12px;
+    /* ── footer ── */
+    .footer {
+      margin-top: 60px;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      opacity: 0.2;
+      text-align: center;
     }
 
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 36px;
-      }
+    /* ── animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-      h2 {
-        font-size: 20px;
-      }
+    /* ── liquid cursor dot ── */
+    .cursor-dot {
+      position: fixed;
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: difference;
+      transform: translate(-50%,-50%);
+      transition: transform 0.08s ease, width 0.2s ease, height 0.2s ease;
+    }
 
-      p {
-        font-size: 14px;
-      }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,255,102,0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.18s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s;
+    }
 
-      .button {
-        width: 80%;
-        max-width: 280px;
-        box-sizing: border-box;
-      }
+    @media (max-width: 600px) {
+      .cursor-dot, .cursor-ring { display: none; }
+      .page { padding: 48px 20px 64px; }
     }
   </style>
 </head>
 <body>
-  <div class="bg-image"></div>
-  <div class="bg-glow"></div>
-  <div class="bg-grid"></div>
-  <div class="wrap">
-    <h1>GLI</h1>
-    <h2>Liquid</h2>
-    <p>
-      NEO Y2Kの質感と、液体のように揺れるグルーヴ。
+
+<!-- WebGL Canvas -->
+<canvas id="glCanvas"></canvas>
+
+<!-- Overlays -->
+<div class="grain"></div>
+<div class="grid"></div>
+<div class="scanlines"></div>
+
+<!-- Custom cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<main class="page">
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="release-label">2026 · NEO Y2K LIQUID</span>
+    <h1 class="artist-name">GLI</h1>
+    <h2 class="album-name">Liquid</h2>
+    <p class="tagline">
+      NEO Y2Kの質感と、液体のように揺れるグルーヴ。<br>
       ここからGLIの音に触れてください。
     </p>
+  </div>
 
-    <div class="links">
-      <a class="button" href="https://www.youtube.com/@glieru8626" target="_blank">YouTube</a>
-      <a class="button" href="https://x.com/glieru" target="_blank">X</a>
-      <a class="button" href="music.html">MUSIC</a>
+  <!-- ────────────────────────────────────────────
+       Spotify Embed
+       SpotifyのアルバムまたはプレイリストURLを取得して
+       下の [SPOTIFY_EMBED_ID] を置き換えてください。
+       例: album/4aawyAB9vmqN3uQ7FjRGTy → album/4aawyAB9vmqN3uQ7FjRGTy
+       ──────────────────────────────────────────── -->
+  <div class="spotify-wrap">
+    <!-- ▼▼▼ SpotifyのURLが確定したらここのiframeを有効にしてください ▼▼▼ -->
+    <!--
+    <iframe
+      src="https://open.spotify.com/embed/album/[SPOTIFY_ALBUM_ID]?utm_source=generator&theme=0"
+      width="100%"
+      height="352"
+      frameBorder="0"
+      allowfullscreen=""
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="lazy">
+    </iframe>
+    -->
+
+    <!-- ▼ SpotifyのURLが未設定の間は下のプレースホルダーを表示 ▼ -->
+    <div class="spotify-placeholder">
+      <span class="sp-icon">♫</span>
+      <span>Spotify URL を設定してください</span><br>
+      <small style="opacity:0.5; margin-top:8px; display:block">
+        src="https://open.spotify.com/embed/album/[ID]?theme=0"
+      </small>
     </div>
   </div>
+
+  <!-- ────────────────────────────────────────────
+       Track Download List
+       hrefに各曲のファイルパスまたはダウンロードURLを設定してください。
+       ──────────────────────────────────────────── -->
+  <div class="downloads">
+    <span class="downloads-label">// tracks</span>
+    <div class="track-list">
+
+      <div class="track-item">
+        <span class="track-num">01</span>
+        <span class="track-name">Liquid</span>
+        <a class="dl-btn" href="tracks/01_liquid.mp3" download>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M6 1v7M3 5.5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          DL
+        </a>
+      </div>
+
+      <div class="track-item">
+        <span class="track-num">02</span>
+        <span class="track-name">Track 02</span>
+        <a class="dl-btn" href="tracks/02_track.mp3" download>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M6 1v7M3 5.5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          DL
+        </a>
+      </div>
+
+      <div class="track-item">
+        <span class="track-num">03</span>
+        <span class="track-name">Track 03</span>
+        <a class="dl-btn" href="tracks/03_track.mp3" download>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M6 1v7M3 5.5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          DL
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Social links -->
+  <div class="socials">
+    <a class="soc-btn" href="https://www.youtube.com/@glieru8626" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
+      YouTube
+    </a>
+    <a class="soc-btn" href="https://x.com/glieru" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      X / Twitter
+    </a>
+    <a class="soc-btn" href="music.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      Music
+    </a>
+  </div>
+
+  <div class="footer">© 2026 GLI · All rights reserved</div>
+
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════
+   WebGL Fluid Shader
+   Simplex-noise based liquid background
+   ═══════════════════════════════════════════════ */
+(function() {
+  const canvas = document.getElementById('glCanvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+
+  const vSrc = `
+    attribute vec2 a_pos;
+    void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
+
+  const fSrc = `
+    precision highp float;
+    uniform vec2  u_res;
+    uniform float u_time;
+
+    /* ── hash & noise ── */
+    vec3 mod289(vec3 x) { return x - floor(x*(1./289.))*289.; }
+    vec4 mod289(vec4 x) { return x - floor(x*(1./289.))*289.; }
+    vec4 permute(vec4 x) { return mod289((x*34.+1.)*x); }
+    vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314*r; }
+
+    float snoise(vec3 v) {
+      const vec2 C = vec2(1./6., 1./3.);
+      const vec4 D = vec4(0., .5, 1., 2.);
+      vec3 i  = floor(v + dot(v, C.yyy));
+      vec3 x0 = v - i + dot(i, C.xxx);
+      vec3 g  = step(x0.yzx, x0.xyz);
+      vec3 l  = 1. - g;
+      vec3 i1 = min(g.xyz, l.zxy);
+      vec3 i2 = max(g.xyz, l.zxy);
+      vec3 x1 = x0 - i1 + C.xxx;
+      vec3 x2 = x0 - i2 + C.yyy;
+      vec3 x3 = x0 - D.yyy;
+      i = mod289(i);
+      vec4 p = permute(permute(permute(
+        i.z + vec4(0., i1.z, i2.z, 1.))
+        + i.y + vec4(0., i1.y, i2.y, 1.))
+        + i.x + vec4(0., i1.x, i2.x, 1.));
+      float n_ = .142857142857;
+      vec3 ns = n_ * D.wyz - D.xzx;
+      vec4 j = p - 49.*floor(p*ns.z*ns.z);
+      vec4 x_ = floor(j*ns.z);
+      vec4 y_ = floor(j - 7.*x_);
+      vec4 x = x_*ns.x + ns.yyyy;
+      vec4 y = y_*ns.x + ns.yyyy;
+      vec4 h = 1. - abs(x) - abs(y);
+      vec4 b0 = vec4(x.xy, y.xy);
+      vec4 b1 = vec4(x.zw, y.zw);
+      vec4 s0 = floor(b0)*2.+1.;
+      vec4 s1 = floor(b1)*2.+1.;
+      vec4 sh = -step(h, vec4(0.));
+      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+      vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+      vec3 p0 = vec3(a0.xy, h.x);
+      vec3 p1 = vec3(a0.zw, h.y);
+      vec3 p2 = vec3(a1.xy, h.z);
+      vec3 p3 = vec3(a1.zw, h.w);
+      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+      vec4 m = max(.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.);
+      m = m*m;
+      return 42.*dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+    }
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_res;
+      float aspect = u_res.x / u_res.y;
+      vec2 p = uv * vec2(aspect, 1.0);
+
+      float t = u_time * 0.16;
+
+      /* domain warp: pをノイズで歪めて流体の引き込み感 */
+      vec2 warp = vec2(
+        snoise(vec3(p * 1.1,       t * 0.7)),
+        snoise(vec3(p * 1.1 + 5.2, t * 0.7 + 1.3))
+      ) * 0.26;
+      vec2 pw = p + warp;
+
+      /* 4層ノイズ（warped coords使用） */
+      float n1 = snoise(vec3(pw * 1.6,        t * 0.9));
+      float n2 = snoise(vec3(pw * 2.8 + 1.3,  t * 1.2 + 0.7));
+      float n3 = snoise(vec3(pw * 5.2 - 0.8,  t * 0.6 + 2.1));
+      float n4 = snoise(vec3(p  * 0.7 + warp * 0.6, t * 0.4));
+
+      float liquid = n1*0.46 + n2*0.28 + n3*0.14 + n4*0.12;
+      liquid = liquid * 0.5 + 0.5;
+
+      /* 2nd warp pass: 波紋の細かいリップル */
+      float ripple = snoise(vec3(pw * 4.0 + liquid * 0.5, t * 1.5 + 0.9)) * 0.5 + 0.5;
+      liquid = mix(liquid, ripple, 0.20);
+
+      /* vignette (動的に揺らす) */
+      float dist = length(uv - 0.5 + vec2(n1*0.03, n2*0.03));
+      float vig = 1.0 - smoothstep(0.28, 0.82, dist);
+
+      /* green blobs: エッジをくっきりさせて水のような塊感 */
+      float blob1 = smoothstep(0.56, 0.65, snoise(vec3(pw * 1.0 - 0.4, t * 0.5)));
+      float blob2 = smoothstep(0.54, 0.63, snoise(vec3(pw * 1.2 + 1.1, t * 0.42 + 1.0)));
+      float blob3 = smoothstep(0.58, 0.66, snoise(vec3(pw * 0.8 + 2.7, t * 0.35 + 2.4)));
+
+      /* base: 深い黒〜深緑 (より深く) */
+      vec3 col = mix(
+        vec3(0.0,  0.02, 0.010),
+        vec3(0.01, 0.06, 0.032),
+        liquid * liquid
+      );
+
+      /* blob glow */
+      col += vec3(0.0, 1.0, 0.40) * blob1 * 0.24 * vig;
+      col += vec3(0.0, 0.85,0.35) * blob2 * 0.17 * vig;
+      col += vec3(0.0, 0.70,0.30) * blob3 * 0.11 * vig;
+
+      /* 液面の光の反射: 明るいピークに細い光 */
+      float peak = pow(liquid, 7.0);
+      col += vec3(0.12, 1.0, 0.52) * peak * 0.15;
+
+      /* ripple輝線: 波の境界を光らせる */
+      float edge = pow(abs(ripple - 0.5) * 2.0, 2.5);
+      col += vec3(0.0, 0.7, 0.32) * edge * 0.09 * vig;
+
+      /* 深部の発光: 液体の底から光が漏れる感じ */
+      float depth = smoothstep(0.42, 0.58, liquid) * (1.0 - smoothstep(0.58, 0.75, liquid));
+      col += vec3(0.0, 0.5, 0.22) * depth * 0.06;
+
+      /* vignette */
+      col *= vig * 0.80 + 0.22;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    return s;
+  }
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, vSrc));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fSrc));
+  gl.linkProgram(prog); gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+  const loc = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  const uRes  = gl.getUniformLocation(prog, 'u_res');
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  let start = null;
+  function frame(ts) {
+    if (!start) start = ts;
+    const t = (ts - start) / 1000;
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ═══════════════════════════════════
+   Custom cursor
+   ═══════════════════════════════════ */
+(function() {
+  const dot  = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  if (!dot || !ring) return;
+
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  function loop() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    dot.style.left  = mx + 'px';
+    dot.style.top   = my + 'px';
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  document.querySelectorAll('a, button, .dl-btn').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      ring.style.width  = '56px';
+      ring.style.height = '56px';
+      ring.style.borderColor = 'rgba(0,255,102,0.9)';
+    });
+    el.addEventListener('mouseleave', () => {
+      ring.style.width  = '36px';
+      ring.style.height = '36px';
+      ring.style.borderColor = 'rgba(0,255,102,0.5)';
+    });
+  });
+})();
+</script>
 </body>
 </html>
