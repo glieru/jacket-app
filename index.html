@@ -1,509 +1,272 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLI — Jacket Maker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=Shippori+Antique+B1&display=swap" rel="stylesheet">
-  <title>Jacket Maker (Frames + Text + Presets)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=M+PLUS+Rounded+1c:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=Shippori+Antique+B1&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-      max-width: 1100px;
-      margin: 24px auto;
-      padding: 0 16px 32px;
-      background: #111;
-      color: #f5f5f5;
+    :root {
+      --g: #00ff66;
+      --g10: rgba(0,255,102,0.10);
+      --g20: rgba(0,255,102,0.20);
+      --border: rgba(0,255,102,0.13);
+      --border-w: rgba(255,255,255,0.07);
+      --panel: rgba(4,8,5,0.72);
+      --sub: rgba(255,255,255,0.38);
     }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{width:100%;background:#000;color:#fff;font-family:'Space Mono',monospace;overflow-x:hidden;}
 
-    h1 {
-      font-size: 1.4rem;
-      margin-bottom: 12px;
-    }
+    /* ── WebGL bg ── */
+    #glCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+    .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.038;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:200px;}
+    .grid-overlay{position:fixed;inset:0;z-index:2;pointer-events:none;
+      background-image:linear-gradient(rgba(0,255,102,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,102,.045) 1px,transparent 1px);
+      background-size:56px 56px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 68%);}
+    .scanlines{position:fixed;inset:0;z-index:3;pointer-events:none;
+      background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,0,0,.065) 3px,rgba(0,0,0,.065) 4px);}
 
-    .nav-bar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin-bottom: 12px;
-      gap: 8px;
-    }
+    /* ── cursor ── */
+    .cursor-dot{position:fixed;width:7px;height:7px;background:var(--g);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:difference;transform:translate(-50%,-50%);}
+    .cursor-ring{position:fixed;width:34px;height:34px;border:1px solid rgba(0,255,102,.45);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .18s,height .18s,border-color .18s;}
 
-    .nav-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.04);
-      color: #f5f5f5;
-      font-size: 0.85rem;
-      text-decoration: none;
-      letter-spacing: 0.02em;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
-    }
+    /* ── page ── */
+    .page{position:relative;z-index:10;max-width:1080px;margin:0 auto;padding:0 22px 88px;}
 
-    .nav-link:hover {
-      background: rgba(255,255,255,0.10);
-      border-color: rgba(255,255,255,0.32);
-      transform: translateY(-1px);
-    }
+    /* ── header ── */
+    header{display:flex;align-items:center;justify-content:space-between;padding:26px 0 20px;border-bottom:1px solid var(--border);gap:16px;}
+    .logo{display:flex;flex-direction:column;gap:3px;}
+    .logo-name{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.12em;text-shadow:0 0 28px rgba(0,255,102,.22);}
+    .logo-sub{font-size:9px;letter-spacing:.28em;color:var(--g);opacity:.55;text-transform:uppercase;}
+    .hd-nav{display:flex;gap:8px;align-items:center;}
+    .pill-link{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border);border-radius:999px;color:rgba(255,255,255,.6);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-decoration:none;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);transition:all .2s;}
+    .pill-link:hover{border-color:var(--g);color:var(--g);box-shadow:0 0 14px rgba(0,255,102,.14);}
 
-    .nav-link:active {
-      transform: translateY(0);
-    }
+    /* ── upload bar ── */
+    .upload-bar{margin:22px 0;padding:18px 22px;border:1px solid var(--border);border-radius:16px;background:var(--panel);backdrop-filter:blur(14px);display:flex;align-items:center;gap:16px;flex-wrap:wrap;animation:fadeUp .8s cubic-bezier(.16,1,.3,1) both;}
+    .upload-bar-left{display:flex;flex-direction:column;gap:4px;}
+    .upload-bar-label{font-size:9px;letter-spacing:.26em;color:var(--g);opacity:.6;text-transform:uppercase;}
+    .upload-bar-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em;}
+    .upload-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto;}
 
-    .panel {
-      background: #1c1c1c;
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    }
+    input[type="file"]{display:none;}
+    .upload-trigger{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:var(--g);color:#000;border:none;border-radius:999px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .18s;white-space:nowrap;}
+    .upload-trigger:hover{box-shadow:0 0 28px rgba(0,255,102,.45);transform:translateY(-1px);}
+    .upload-trigger svg{flex-shrink:0;}
 
-    .panel-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      opacity: 0.85;
-    }
+    /* ── main layout ── */
+    .main{display:flex;gap:16px;align-items:flex-start;}
+    .col-left{flex:1.15;min-width:0;position:sticky;top:16px;}
+    .col-right{flex:1;min-width:260px;max-width:390px;display:flex;flex-direction:column;gap:11px;}
 
-    label {
-      font-size: 0.9rem;
-      opacity: 0.9;
-    }
+    /* ── preview panel ── */
+    .preview-panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);animation:fadeUp .8s .06s cubic-bezier(.16,1,.3,1) both;}
+    .preview-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .preview-label{font-size:9px;letter-spacing:.26em;color:var(--g);opacity:.5;text-transform:uppercase;}
+    .preview-size-badge{font-size:9px;letter-spacing:.1em;color:var(--g);opacity:.55;background:var(--g10);padding:3px 8px;border-radius:999px;border:1px solid var(--border);}
+    #canvas{width:100%;border-radius:12px;background:#060906;display:block;border:1px solid rgba(0,255,102,.08);}
+    .dl-row{display:flex;gap:8px;margin-top:12px;}
 
-    input[type="file"],
-    select,
-    button,
-    input[type="range"],
-    input[type="color"],
-    input[type="text"] {
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
+    /* ── section panel ── */
+    .sec{background:var(--panel);border:1px solid var(--border-w);border-radius:15px;overflow:hidden;backdrop-filter:blur(14px);animation:fadeUp .8s .1s cubic-bezier(.16,1,.3,1) both;}
+    .sec-head{display:flex;align-items:center;gap:0;padding:10px 16px;border-bottom:1px solid var(--border-w);cursor:pointer;user-select:none;transition:background .15s;}
+    .sec-head:hover{background:rgba(0,255,102,.03);}
+    .sec-num{font-size:9px;letter-spacing:.22em;color:var(--g);opacity:.45;width:2.2rem;flex-shrink:0;}
+    .sec-title{font-size:11px;letter-spacing:.12em;font-weight:700;flex:1;}
+    .sec-arrow{font-size:10px;color:var(--g);opacity:.45;transition:transform .22s;}
+    .sec-arrow.open{transform:rotate(180deg);}
+    .sec-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+    .sec-body.closed{display:none;}
 
-    /* ファイル選択ボタンを PNGダウンロード と同じ系の見た目にする */
-    input[type="file"] {
-      font-size: 0.85rem;
-      color: #ddd;
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
+    /* ── form base ── */
+    label.lbl{font-size:10px;letter-spacing:.08em;color:var(--sub);display:block;margin-bottom:4px;}
+    select,input[type="text"]{width:100%;padding:7px 11px;background:rgba(0,0,0,.55);border:1px solid var(--border-w);border-radius:8px;color:#fff;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;outline:none;transition:border-color .2s;}
+    select:focus,input[type="text"]:focus{border-color:rgba(0,255,102,.38);}
+    select option{background:#0a0f0a;}
+    input[type="color"]{width:38px;height:26px;padding:0;border-radius:6px;border:1px solid var(--border-w);background:transparent;cursor:pointer;}
+    input[type="checkbox"]{accent-color:var(--g);}
 
-    /* モダンブラウザ用 */
-    input[type="file"]::file-selector-button {
-      background: #4ade80;
-      color: #111;
-      border: none;
-      border-radius: 999px;
-      padding: 6px 14px;
-      margin-right: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
+    /* ── slider row ── */
+    .sl-row{display:grid;grid-template-columns:4.6rem 1fr 2.2rem;align-items:center;gap:8px;}
+    .sl-lbl{font-size:9px;letter-spacing:.07em;color:var(--sub);}
+    .sl-val{font-size:9px;color:var(--g);opacity:.65;text-align:right;letter-spacing:.04em;}
 
-    /* WebKit系の古い指定（Safari対策） */
-    input[type="file"]::-webkit-file-upload-button {
-      background: #4ade80;
-      color: #111;
-      border: none;
-      border-radius: 999px;
-      padding: 6px 14px;
-      margin-right: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
+    input[type="range"]{width:100%;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;}
+    input[type="range"]::-webkit-slider-runnable-track{height:2px;background:rgba(255,255,255,.14);border-radius:999px;}
+    input[type="range"]::-moz-range-track{height:2px;background:rgba(255,255,255,.14);border-radius:999px;}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--g);border:2px solid #000;margin-top:-5px;cursor:pointer;}
+    input[type="range"]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--g);border:2px solid #000;cursor:pointer;}
+    input[type="range"].cm::-webkit-slider-runnable-track{background:linear-gradient(to right,rgba(255,255,255,.14) 0%,rgba(255,255,255,.14) 49%,rgba(0,255,102,.65) 49.5%,rgba(0,255,102,.65) 50.5%,rgba(255,255,255,.14) 51%,rgba(255,255,255,.14) 100%);}
+    input[type="range"].cm::-moz-range-track{background:linear-gradient(to right,rgba(255,255,255,.14) 0%,rgba(255,255,255,.14) 49%,rgba(0,255,102,.65) 49.5%,rgba(0,255,102,.65) 50.5%,rgba(255,255,255,.14) 51%,rgba(255,255,255,.14) 100%);}
 
-    input[type="file"]::file-selector-button:hover,
-    input[type="file"]::-webkit-file-upload-button:hover {
-      background: #6ee7b7; /* ちょっとだけ明るく */
-    }
+    /* ── color row ── */
+    .color-row{display:flex;align-items:center;gap:9px;}
+    .color-row .lbl{margin:0;}
 
-    select,
-    button {
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: none;
-      font-size: 0.9rem;
-    }
+    /* ── chips ── */
+    .chip-row{display:flex;flex-wrap:wrap;gap:5px;}
+    .chip{padding:4px 10px;border:1px solid var(--border-w);border-radius:999px;background:rgba(255,255,255,.02);color:rgba(255,255,255,.55);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.07em;cursor:pointer;transition:all .14s;}
+    .chip:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2);}
+    .chip.active{background:var(--g10);border-color:var(--g);color:var(--g);}
 
-    select {
-      background: #222;
-      color: #f5f5f5;
-    }
+    /* ── buttons ── */
+    .btn-green{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--g);color:#000;border:none;border-radius:999px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .18s;white-space:nowrap;}
+    .btn-green:hover{box-shadow:0 0 22px rgba(0,255,102,.38);transform:translateY(-1px);}
+    .btn-green:disabled{background:rgba(255,255,255,.1);color:rgba(255,255,255,.28);cursor:not-allowed;box-shadow:none;transform:none;}
+    .btn-outline{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--g);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;transition:all .18s;white-space:nowrap;}
+    .btn-outline:hover{background:var(--g10);box-shadow:0 0 12px rgba(0,255,102,.14);}
+    .btn-sm{padding:4px 10px;font-size:9px;}
 
-    button {
-      background: #4ade80;
-      color: #111;
-      cursor: pointer;
-      font-weight: 600;
-    }
+    /* ── two-col grid ── */
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-    button:disabled {
-      background: #555;
-      color: #aaa;
-      cursor: not-allowed;
-    }
+    /* ── check row ── */
+    .check-row{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.06em;color:var(--sub);cursor:pointer;}
 
-    input[type="text"] {
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: none;
-      background: #222;
-      color: #f5f5f5;
-      font-size: 0.9rem;
-    }
+    /* ── divider ── */
+    .div{height:1px;background:var(--border-w);margin:4px 0;}
 
-    canvas {
-      margin-top: 12px;
-      width: 100%;
-      max-width: 520px;
-      border-radius: 24px;
-      background: #000;
-      display: block;
-    }
+    /* ── note ── */
+    .note{font-size:9px;color:var(--sub);letter-spacing:.06em;line-height:1.75;}
 
-    .note {
-      font-size: 0.8rem;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
+    /* ── footer ── */
+    footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);font-size:9px;letter-spacing:.2em;color:var(--sub);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 
-    /* レイアウト：左プレビュー / 右コントロール */
-    .layout {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      margin-top: 8px;
-    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
-    .layout-left {
-      flex: 1.1;
-      min-width: 0;
-      position: sticky;
-      top: 16px;
-      align-self: flex-start;
-      height: fit-content;
-    }
-
-    .layout-right {
-      flex: 1;
-      min-width: 280px;
-      max-width: 420px;
-    }
-
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-
-    .control-block {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .slider-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .slider-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-    }
-
-    .slider-row span.label {
-      width: 4.8rem;
-      opacity: 0.9;
-    }
-
-    input[type="color"] {
-      width: 60px;
-      height: 30px;
-      padding: 0;
-      border-radius: 999px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    /* すべての range スライダー共通の見た目（ミニマルなバー＋丸いノブ） */
-    input[type="range"] {
-      box-sizing: border-box;
-      width: 100%;
-      flex: 1;
-      background: transparent;
-      cursor: pointer;
-      -webkit-appearance: none; /* Chrome / Safari */
-      appearance: none;
-    }
-
-    input[type="range"]:focus {
-      outline: none;
-    }
-
-    /* WebKit (Chrome / Safari) track */
-    input[type="range"]::-webkit-slider-runnable-track {
-      height: 4px;
-      background: rgba(255,255,255,0.3);
-      border-radius: 999px;
-    }
-
-    /* Firefox track */
-    input[type="range"]::-moz-range-track {
-      height: 4px;
-      background: rgba(255,255,255,0.3);
-      border-radius: 999px;
-    }
-
-    /* IE/Edge legacy track (透明にしておく) */
-    input[type="range"]::-ms-track {
-      height: 4px;
-      background: transparent;
-      border-color: transparent;
-      color: transparent;
-    }
-
-    /* 共通ノブ（thumb） */
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background-color: #16a085; /* ノブの色 */
-      border: 2px solid #ffffff; /* 枠線 */
-      margin-top: -5px; /* トラック高さ4px分に合わせて中央にくるよう調整 */
-      cursor: pointer;
-    }
-
-    input[type="range"]::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background-color: #16a085;
-      border: 2px solid #ffffff;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-ms-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background-color: #16a085;
-      border: 2px solid #ffffff;
-      cursor: pointer;
-    }
-
-    /* hover / active 時の枠線を少し強調 */
-    input[type="range"]:hover::-webkit-slider-thumb,
-    input[type="range"]:hover::-moz-range-thumb,
-    input[type="range"]:hover::-ms-thumb {
-      border-color: rgba(255,255,255,0.9);
-    }
-
-    input[type="range"]:active::-webkit-slider-thumb,
-    input[type="range"]:active::-moz-range-thumb,
-    input[type="range"]:active::-ms-thumb {
-      border-color: #ffffff;
-    }
-
-    /* ========== 中央ガイド付きスライダー用（cropX, cropY, textX, textY） ========== */
-    /* center-mark クラスが付いているものだけ、トラック中央に細いラインを追加 */
-
-    input[type="range"].center-mark::-webkit-slider-runnable-track {
-      height: 4px;
-      border-radius: 999px;
-      background: linear-gradient(
-        to right,
-        rgba(255,255,255,0.3) 0%,
-        rgba(255,255,255,0.3) 49%,
-        rgba(255,255,255,0.9) 49.5%,  /* 中央の細い線 */
-        rgba(255,255,255,0.9) 50.5%,
-        rgba(255,255,255,0.3) 51%,
-        rgba(255,255,255,0.3) 100%
-      );
-    }
-
-    input[type="range"].center-mark::-moz-range-track {
-      height: 4px;
-      border-radius: 999px;
-      background: linear-gradient(
-        to right,
-        rgba(255,255,255,0.3) 0%,
-        rgba(255,255,255,0.3) 49%,
-        rgba(255,255,255,0.9) 49.5%,
-        rgba(255,255,255,0.9) 50.5%,
-        rgba(255,255,255,0.3) 51%,
-        rgba(255,255,255,0.3) 100%
-      );
-    }
-
-    /* プリセットボタン */
-    .preset-row,
-    .text-pos-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .preset-btn,
-    .text-pos-btn {
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.16);
-      background: rgba(255,255,255,0.03);
-      color: #f5f5f5;
-      font-size: 0.8rem;
-      padding: 4px 10px;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
-    }
-
-    .preset-btn:hover,
-    .text-pos-btn:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.28);
-    }
-
-    .preset-btn:active,
-    .text-pos-btn:active {
-      transform: scale(0.97);
-    }
-
-    .preset-btn.is-active,
-    .text-pos-btn.is-active {
-      background: rgba(74, 222, 128, 0.12);
-      border-color: #4ade80;
-    }
-
-    @media (max-width: 800px) {
-      .layout {
-        flex-direction: column;
-      }
-      .layout-right {
-        max-width: none;
-      }
-      .layout-left {
-        position: static;
-      }
+    @media(max-width:760px){
+      .main{flex-direction:column;}
+      .col-right{max-width:none;}
+      .col-left{position:static;}
+      .cursor-dot,.cursor-ring{display:none;}
+      .upload-bar{flex-direction:column;align-items:flex-start;}
+      .upload-actions{margin-left:0;}
     }
   </style>
 </head>
 <body>
-  <h1>Jacket Maker (Beta)</h1>
-  <div class="nav-bar">
-    <a href="music.html" class="nav-link">My Tracks</a>
+<canvas id="glCanvas"></canvas>
+<div class="grain"></div>
+<div class="grid-overlay"></div>
+<div class="scanlines"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<div class="page">
+
+  <header>
+    <div class="logo">
+      <div class="logo-name">GLI</div>
+      <div class="logo-sub">Jacket Maker</div>
+    </div>
+    <nav class="hd-nav">
+      <a href="music.html" class="pill-link">♫ &nbsp;Music</a>
+    </nav>
+  </header>
+
+  <!-- Upload bar -->
+  <div class="upload-bar">
+    <div class="upload-bar-left">
+      <span class="upload-bar-label">// 写真をジャケットに変換する</span>
+      <span class="upload-bar-title">Jacket Maker</span>
+    </div>
+    <div class="upload-actions">
+      <input type="file" id="fileInput" accept="image/*">
+      <button class="upload-trigger" id="uploadTrigger">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 1v9M4 5l3.5-4L11 5M1 11.5h13" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        写真をアップロード
+      </button>
+      <button class="btn-outline" id="generateArtBtn">✦ &nbsp;ランダム生成</button>
+    </div>
   </div>
 
-  <!-- 画像選択 -->
-  <div class="panel">
-    <div class="panel-title">① 画像を選ぶ</div>
-    <input type="file" id="fileInput" accept="image/*" />
-    <button type="button" id="generateArtBtn">背景をランダム生成する</button>
-    <p class="note">
-      正方形にトリミングして、中央シャープ＋外側ぼかし、フレームやテキストまで調整できます。
-    </p>
-  </div>
+  <div class="main">
 
-  <div class="layout">
-    <!-- 左：プレビュー -->
-    <div class="layout-left">
-      <div class="panel">
-        <div class="panel-title">プレビュー</div>
+    <!-- ── LEFT: Preview ── -->
+    <div class="col-left">
+      <div class="preview-panel">
+        <div class="preview-top">
+          <span class="preview-label">// preview</span>
+          <span class="preview-size-badge" id="sizeBadge">1080 × 1080</span>
+        </div>
         <canvas id="canvas" width="1080" height="1080"></canvas>
-        <button id="downloadBtn" disabled style="margin-top: 12px;">PNGをダウンロード</button>
+        <div class="dl-row">
+          <button class="btn-green" id="downloadBtn" disabled>↓ &nbsp;PNG ダウンロード</button>
+        </div>
       </div>
     </div>
 
-    <!-- 右：コントロール -->
-    <div class="layout-right">
-      <!-- 出力 & フレーム設定 -->
-      <div class="panel">
-        <div class="panel-title">② 出力 & フレーム設定</div>
-        <div class="controls-grid">
-          <div class="control-block">
-            <label for="sizeSelect">出力サイズ</label>
-            <select id="sizeSelect">
-              <option value="1080">1080 x 1080（SNS向け）</option>
-              <option value="1600">1600 x 1600</option>
-              <option value="2000">2000 x 2000</option>
-            </select>
-          </div>
+    <!-- ── RIGHT: Controls ── -->
+    <div class="col-right">
 
-          <div class="control-block">
-            <label for="frameSelect">フレーム種類</label>
-            <select id="frameSelect">
-              <option value="simple">シンプル枠</option>
-              <option value="none">枠なし</option>
-            </select>
-          </div>
-
-          <div class="control-block">
-            <label for="frameColor">フレーム色</label>
-            <input type="color" id="frameColor" value="#ffffff" />
-          </div>
-
-          <div class="control-block">
-            <div class="slider-group">
-              <div class="slider-row">
-                <span class="label">枠の太さ</span>
-                <input type="range" id="frameWidth" min="0" max="100" value="0" />
-              </div>
-              <div class="slider-row">
-                <span class="label">枠の内側</span>
-                <input type="range" id="frameOffset" min="0" max="100" value="30" />
-              </div>
-              <div class="slider-row">
-                <span class="label">角丸</span>
-                <input type="range" id="frameRadius" min="0" max="100" value="0" />
-              </div>
-              <div class="slider-row">
-                <span class="label">枠透明度</span>
-                <input type="range" id="frameOpacity" min="0" max="100" value="100" />
-              </div>
+      <!-- 01 出力 & フレーム -->
+      <div class="sec" id="sec01">
+        <div class="sec-head" onclick="toggleSec('sec01')">
+          <span class="sec-num">01</span>
+          <span class="sec-title">出力 &amp; フレーム</span>
+          <span class="sec-arrow open" id="sec01-arrow">▾</span>
+        </div>
+        <div class="sec-body" id="sec01-body">
+          <div class="grid2">
+            <div>
+              <label class="lbl">出力サイズ</label>
+              <select id="sizeSelect">
+                <option value="1080">1080 × 1080</option>
+                <option value="1600">1600 × 1600</option>
+                <option value="2000">2000 × 2000</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">フレーム</label>
+              <select id="frameSelect">
+                <option value="simple">シンプル枠</option>
+                <option value="none">枠なし</option>
+              </select>
             </div>
           </div>
+          <div class="color-row">
+            <input type="color" id="frameColor" value="#ffffff">
+            <label class="lbl">フレーム色</label>
+          </div>
+          <div class="sl-row"><span class="sl-lbl">枠の太さ</span><input type="range" id="frameWidth" min="0" max="100" value="0"><span class="sl-val" id="frameWidthVal">0</span></div>
+          <div class="sl-row"><span class="sl-lbl">枠の内側</span><input type="range" id="frameOffset" min="0" max="100" value="30"><span class="sl-val" id="frameOffsetVal">30</span></div>
+          <div class="sl-row"><span class="sl-lbl">角丸</span><input type="range" id="frameRadius" min="0" max="100" value="0"><span class="sl-val" id="frameRadiusVal">0</span></div>
+          <div class="sl-row"><span class="sl-lbl">枠透明度</span><input type="range" id="frameOpacity" min="0" max="100" value="100"><span class="sl-val" id="frameOpacityVal">100</span></div>
         </div>
       </div>
 
-      <!-- トリミング & ズーム -->
-      <div class="panel">
-        <div class="panel-title">③ トリミング & ズーム</div>
-        <div class="slider-group">
-          <div class="slider-row">
-            <span class="label">左右位置</span>
-            <input type="range" id="cropX" class="center-mark" min="0" max="100" value="50" />
-          </div>
-          <div class="slider-row">
-            <span class="label">上下位置</span>
-            <input type="range" id="cropY" class="center-mark" min="0" max="100" value="50" />
-          </div>
-          <div class="slider-row">
-            <span class="label">ズーム</span>
-            <input type="range" id="zoom" min="100" max="250" value="100" />
-          </div>
+      <!-- 02 トリミング -->
+      <div class="sec" id="sec02">
+        <div class="sec-head" onclick="toggleSec('sec02')">
+          <span class="sec-num">02</span>
+          <span class="sec-title">トリミング &amp; ズーム</span>
+          <span class="sec-arrow open" id="sec02-arrow">▾</span>
         </div>
-        <p class="note">
-          左右・上下位置は、画像の端から端まで動きます。中央付近では自動で真ん中にスナップします。
-        </p>
+        <div class="sec-body" id="sec02-body">
+          <div class="sl-row"><span class="sl-lbl">左右</span><input type="range" id="cropX" class="cm" min="0" max="100" value="50"><span class="sl-val" id="cropXVal">50</span></div>
+          <div class="sl-row"><span class="sl-lbl">上下</span><input type="range" id="cropY" class="cm" min="0" max="100" value="50"><span class="sl-val" id="cropYVal">50</span></div>
+          <div class="sl-row"><span class="sl-lbl">ズーム</span><input type="range" id="zoom" min="100" max="250" value="100"><span class="sl-val" id="zoomVal">100</span></div>
+          <p class="note">中央 ± 2 で自動スナップ。</p>
+        </div>
       </div>
 
-      <!-- エフェクト & 外側の見え方 -->
-      <div class="panel">
-        <div class="panel-title">④ エフェクト & 外側の見え方</div>
-        <div class="controls-grid">
-          <div class="control-block">
-            <label for="filterSelect">カラー・質感</label>
+      <!-- 03 エフェクト -->
+      <div class="sec" id="sec03">
+        <div class="sec-head" onclick="toggleSec('sec03')">
+          <span class="sec-num">03</span>
+          <span class="sec-title">エフェクト</span>
+          <span class="sec-arrow open" id="sec03-arrow">▾</span>
+        </div>
+        <div class="sec-body" id="sec03-body">
+          <div>
+            <label class="lbl">カラー・質感</label>
             <select id="filterSelect">
               <option value="none">なし</option>
               <option value="soft">ソフト</option>
@@ -511,711 +274,286 @@
               <option value="mono">モノクロ寄り</option>
             </select>
           </div>
-
-          <div class="control-block">
-            <div class="slider-group">
-              <div class="slider-row">
-                <span class="label">外側ぼかし</span>
-                <input type="range" id="blurAmount" min="0" max="20" value="6" />
-              </div>
-              <div class="slider-row">
-                <span class="label">外側ズーム</span>
-                <input type="range" id="outerScale" min="0" max="40" value="0" />
-              </div>
-            </div>
-          </div>
-
-          <div class="control-block">
-            <label>
-              <input type="checkbox" id="showGrid" />
-              ガイド線（3分割）を表示
-            </label>
-          </div>
+          <div class="sl-row"><span class="sl-lbl">外側ぼかし</span><input type="range" id="blurAmount" min="0" max="20" value="6"><span class="sl-val" id="blurAmountVal">6</span></div>
+          <div class="sl-row"><span class="sl-lbl">外側ズーム</span><input type="range" id="outerScale" min="0" max="40" value="0"><span class="sl-val" id="outerScaleVal">0</span></div>
+          <label class="check-row"><input type="checkbox" id="showGrid"> ガイド線（3分割）</label>
         </div>
-        <p class="note">
-          「外側ズーム」を0にすると、内側と外側のスケールが揃い、枠を乗せただけの自然な見え方になります。
-        </p>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">⑤ テキスト</div>
-        <div class="controls-grid">
-          <div class="control-block">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <label for="text1" style="margin-bottom:0;">テキスト1</label>
-              <button type="button" id="addTextBlockBtn" style="padding:2px 8px; border-radius:999px; font-size:0.75rem;">
-                ＋ 追加
-              </button>
+      <!-- 04 テキスト -->
+      <div class="sec" id="sec04">
+        <div class="sec-head" onclick="toggleSec('sec04')">
+          <span class="sec-num">04</span>
+          <span class="sec-title">テキスト</span>
+          <span class="sec-arrow open" id="sec04-arrow">▾</span>
+        </div>
+        <div class="sec-body" id="sec04-body">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <label class="lbl" style="margin:0;">テキスト 1</label>
+              <button class="btn-outline btn-sm" id="addTextBlockBtn">＋ 追加</button>
             </div>
-            <input type="text" id="text1" placeholder="テキストを入力" />
+            <input type="text" id="text1" placeholder="アーティスト名、タイトルなど">
           </div>
-
-          <div class="control-block" id="textBlock2Panel" style="display:none;">
-            <label for="text2">テキスト2</label>
-            <input type="text" id="text2" placeholder="追加テキスト" />
+          <div id="textBlock2Panel" style="display:none;">
+            <label class="lbl">テキスト 2</label>
+            <input type="text" id="text2" placeholder="サブテキスト">
           </div>
-
-          <div class="control-block">
-            <label for="fontSelect">フォント</label>
+          <div class="div"></div>
+          <div>
+            <label class="lbl">フォント</label>
             <select id="fontSelect">
               <option value="system">システム（デフォルト）</option>
-              <option value="notoSans">Noto Sans JP（日本語ゴシック）</option>
-              <option value="mPlusRounded">M PLUS Rounded 1c（丸ゴシック）</option>
-              <option value="shippori">Shippori Antique B1（アンティーク風）</option>
-              <option value="sans">汎用ゴシック（sans-serif）</option>
-              <option value="serif">汎用明朝（serif）</option>
-              <option value="mono">等幅（monospace）</option>
-              <option value="cursive">手書き風（cursive）</option>
-              <option value="impact">タイトル用（Impact系）</option>
+              <option value="notoSans">Noto Sans JP</option>
+              <option value="mPlusRounded">M PLUS Rounded 1c</option>
+              <option value="shippori">Shippori Antique B1</option>
+              <option value="sans">汎用ゴシック</option>
+              <option value="serif">汎用明朝</option>
+              <option value="mono">等幅</option>
+              <option value="impact">タイトル用 Impact</option>
             </select>
           </div>
-
-          <div class="control-block">
-            <label for="customFont">カスタムフォント名（任意）</label>
-            <input type="text" id="customFont" placeholder="例: Noto Sans JP" />
-            <p class="note">ここに入力がある場合、この名前をそのままフォントとして使います（CSSのfont-family名）。</p>
+          <div>
+            <label class="lbl">カスタムフォント名</label>
+            <input type="text" id="customFont" placeholder="例: Noto Sans JP">
           </div>
-
-          <div class="control-block">
-            <div class="slider-group">
-              <!-- テキスト1用 -->
-              <div class="slider-row">
-                <span class="label">文字サイズ1</span>
-                <input type="range" id="textSize" min="20" max="160" value="40" />
-              </div>
-              <div class="slider-row">
-                <span class="label">X位置1</span>
-                <input type="range" id="textX" class="center-mark" min="0" max="100" value="50" />
-              </div>
-              <div class="slider-row">
-                <span class="label">Y位置1</span>
-                <input type="range" id="textY" class="center-mark" min="0" max="100" value="80" />
-              </div>
-
-              <!-- テキスト2用（＋ 追加を押すと表示） -->
-              <div id="text2Controls" style="display:none; margin-top:6px;">
-                <div class="slider-row">
-                  <span class="label">文字サイズ2</span>
-                  <input type="range" id="textSize2" min="20" max="160" value="40" />
-                </div>
-                <div class="slider-row">
-                  <span class="label">X位置2</span>
-                  <input type="range" id="text2X" class="center-mark" min="0" max="100" value="50" />
-                </div>
-                <div class="slider-row">
-                  <span class="label">Y位置2</span>
-                  <input type="range" id="text2Y" class="center-mark" min="0" max="100" value="88" />
-                </div>
-              </div>
-
-              <div class="slider-row">
-                <span class="label">文字色</span>
-                <input type="color" id="textColor" value="#ffffff" />
-              </div>
-            </div>
+          <div class="div"></div>
+          <div class="sl-row"><span class="sl-lbl">サイズ 1</span><input type="range" id="textSize" min="20" max="160" value="40"><span class="sl-val" id="textSizeVal">40</span></div>
+          <div class="sl-row"><span class="sl-lbl">X &nbsp;位置 1</span><input type="range" id="textX" class="cm" min="0" max="100" value="50"><span class="sl-val" id="textXVal">50</span></div>
+          <div class="sl-row"><span class="sl-lbl">Y &nbsp;位置 1</span><input type="range" id="textY" class="cm" min="0" max="100" value="80"><span class="sl-val" id="textYVal">80</span></div>
+          <div id="text2Controls" style="display:none;">
+            <div class="div"></div>
+            <div class="sl-row"><span class="sl-lbl">サイズ 2</span><input type="range" id="textSize2" min="20" max="160" value="40"><span class="sl-val" id="textSize2Val">40</span></div>
+            <div class="sl-row"><span class="sl-lbl">X &nbsp;位置 2</span><input type="range" id="text2X" class="cm" min="0" max="100" value="50"><span class="sl-val" id="text2XVal">50</span></div>
+            <div class="sl-row"><span class="sl-lbl">Y &nbsp;位置 2</span><input type="range" id="text2Y" class="cm" min="0" max="100" value="88"><span class="sl-val" id="text2YVal">88</span></div>
           </div>
-
-          <div class="control-block">
-            <label>テキスト位置プリセット</label>
-            <div class="text-pos-row">
-              <button type="button" class="text-pos-btn" data-pos="topLeft">左上</button>
-              <button type="button" class="text-pos-btn" data-pos="top">上中央</button>
-              <button type="button" class="text-pos-btn" data-pos="topRight">右上</button>
-              <button type="button" class="text-pos-btn" data-pos="middleLeft">左中央</button>
-              <button type="button" class="text-pos-btn" data-pos="center">中央</button>
-              <button type="button" class="text-pos-btn" data-pos="middleRight">右中央</button>
-              <button type="button" class="text-pos-btn" data-pos="bottomLeft">左下</button>
-              <button type="button" class="text-pos-btn" data-pos="bottom">下中央</button>
-              <button type="button" class="text-pos-btn" data-pos="bottomRight">右下</button>
+          <div class="color-row" style="margin-top:2px;">
+            <input type="color" id="textColor" value="#ffffff">
+            <label class="lbl">文字色</label>
+          </div>
+          <div class="div"></div>
+          <div>
+            <label class="lbl">位置プリセット</label>
+            <div class="chip-row">
+              <button class="chip" data-pos="topLeft">左上</button>
+              <button class="chip" data-pos="top">上中央</button>
+              <button class="chip" data-pos="topRight">右上</button>
+              <button class="chip" data-pos="middleLeft">左中央</button>
+              <button class="chip" data-pos="center">中央</button>
+              <button class="chip" data-pos="middleRight">右中央</button>
+              <button class="chip" data-pos="bottomLeft">左下</button>
+              <button class="chip" data-pos="bottom">下中央</button>
+              <button class="chip" data-pos="bottomRight">右下</button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- レイアウトプリセット -->
-      <div class="panel">
-        <div class="panel-title">⑥ レイアウトプリセット</div>
-        <div class="preset-row">
-          <button type="button" class="preset-btn" data-preset="cleanCenter">
-            シンプル中央
-          </button>
-          <button type="button" class="preset-btn" data-preset="photoFocus">
-            写真メイン
-          </button>
-          <button type="button" class="preset-btn" data-preset="bottomTitle">
-            下寄せタイトル
-          </button>
+      <!-- 05 レイアウトプリセット -->
+      <div class="sec" id="sec05">
+        <div class="sec-head" onclick="toggleSec('sec05')">
+          <span class="sec-num">05</span>
+          <span class="sec-title">レイアウトプリセット</span>
+          <span class="sec-arrow open" id="sec05-arrow">▾</span>
         </div>
-        <p class="note">
-          プリセットを押してから、細かい位置はスライダーで微調整すると楽です。
-        </p>
+        <div class="sec-body" id="sec05-body">
+          <div class="chip-row">
+            <button class="chip" data-preset="cleanCenter">シンプル中央</button>
+            <button class="chip" data-preset="photoFocus">写真メイン</button>
+            <button class="chip" data-preset="bottomTitle">下寄せタイトル</button>
+          </div>
+          <p class="note">プリセット後、スライダーで微調整。</p>
+        </div>
       </div>
 
-    </div>
-  </div>
-
-  <script>
-    // 要素取得
-    const fileInput     = document.getElementById('fileInput');
-    const sizeSelect    = document.getElementById('sizeSelect');
-    const frameSelect   = document.getElementById('frameSelect');
-    const frameColorEl  = document.getElementById('frameColor');
-    const frameWidthEl  = document.getElementById('frameWidth');
-    const frameOffsetEl = document.getElementById('frameOffset');
-    const frameRadiusEl = document.getElementById('frameRadius');
-    const frameOpacityEl= document.getElementById('frameOpacity');
-    const filterSelect  = document.getElementById('filterSelect');
-    const blurAmountEl  = document.getElementById('blurAmount');
-    const outerScaleEl  = document.getElementById('outerScale');
-    const showGridEl    = document.getElementById('showGrid');
-    const cropXEl       = document.getElementById('cropX');
-    const cropYEl       = document.getElementById('cropY');
-    const zoomSlider    = document.getElementById('zoom');
-    const text1El       = document.getElementById('text1');
-    const text2El       = document.getElementById('text2');
-    const fontSelect    = document.getElementById('fontSelect');
-    const customFontEl  = document.getElementById('customFont');
-    const textSizeEl    = document.getElementById('textSize');
-    const textSize2El   = document.getElementById('textSize2');
-    const textXEl       = document.getElementById('textX');
-    const textYEl       = document.getElementById('textY');
-    const text2XEl      = document.getElementById('text2X');
-    const text2YEl      = document.getElementById('text2Y');
-    const textColorEl   = document.getElementById('textColor');
-    const downloadBtn   = document.getElementById('downloadBtn');
-    const presetButtons = document.querySelectorAll('.preset-btn');
-    const textPosButtons= document.querySelectorAll('.text-pos-btn');
-    const addTextBlockBtn = document.getElementById('addTextBlockBtn');
-    const textBlock2Panel = document.getElementById('textBlock2Panel');
-    const canvas        = document.getElementById('canvas');
-    const ctx           = canvas.getContext('2d');
-    const generateArtBtn = document.getElementById('generateArtBtn');
-
-    const img = new Image();
-    let imageLoaded = false;
-
-    img.onload = function() {
-      imageLoaded = true;
-      updateCenterSnap();
-      redraw();
-      downloadBtn.disabled = false;
-    };
-
-    fileInput.addEventListener('change', function (event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // すべてのコントロールで redraw + 中央スナップ
-    [
-      sizeSelect, frameSelect, frameColorEl, frameWidthEl,
-      frameOffsetEl, frameRadiusEl, frameOpacityEl, filterSelect,
-      blurAmountEl, outerScaleEl, cropXEl, cropYEl, zoomSlider,
-      text1El, text2El, fontSelect, customFontEl, textSizeEl, textSize2El,
-      textXEl, textYEl, text2XEl, text2YEl, textColorEl,
-      showGridEl
-    ].forEach(el => el.addEventListener('input', () => {
-      updateCenterSnap();
-      redraw();
-    }));
-
-    // レイアウトプリセット
-    presetButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.dataset.preset;
-        presetButtons.forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        applyLayoutPreset(name);
-      });
-    });
-
-    // テキスト位置プリセット
-    textPosButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const pos = btn.dataset.pos;
-        textPosButtons.forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        applyTextPositionPreset(pos);
-      });
-    });
-
-    // テキスト2の追加ボタン
-    if (addTextBlockBtn && textBlock2Panel) {
-      addTextBlockBtn.addEventListener('click', () => {
-        textBlock2Panel.style.display = 'block';
-        const text2Controls = document.getElementById('text2Controls');
-        if (text2Controls) {
-          text2Controls.style.display = 'block';
-        }
-        addTextBlockBtn.disabled = true; // 最大2つまで
-        redraw();
-      });
-    }
-
-    // フィルタープリセット（ぼかし抜きのベース）
-    function getBaseFilter(style) {
-      if (style === 'soft') {
-        return 'contrast(108%) saturate(110%)';
-      }
-      if (style === 'hard') {
-        return 'contrast(130%) saturate(130%)';
-      }
-      if (style === 'mono') {
-        return 'grayscale(85%) contrast(115%)';
-      }
-      return 'none';
-    }
-
-    // blurとベースフィルターを合成
-    function buildFilter(base, blurPx, includeBlur) {
-      const parts = [];
-      if (includeBlur && blurPx > 0) {
-        parts.push(`blur(${blurPx}px)`);
-      }
-      if (base && base !== 'none') {
-        parts.push(base);
-      }
-      return parts.join(' ') || 'none';
-    }
-
-    // 角丸矩形パス
-    function roundedRectPath(ctx, x, y, w, h, r) {
-      const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + w - radius, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-      ctx.lineTo(x + w, y + h - radius);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-      ctx.lineTo(x + radius, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-    }
-
-    // フォントキー → 実際のフォントファミリ（日本語対応）＋カスタム
-    function resolveFontFamily(key) {
-      // カスタムフォント名が入力されていればそれを最優先で使う
-      if (customFontEl && customFontEl.value.trim()) {
-        return customFontEl.value.trim();
-      }
-
-      switch (key) {
-        case 'system':
-          return 'system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
-        case 'notoSans':
-          return '"Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", Meiryo, sans-serif';
-        case 'mPlusRounded':
-          return '"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", Meiryo, sans-serif';
-        case 'shippori':
-          return '"Shippori Antique B1", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
-        case 'sans':
-          return 'Helvetica, Arial, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
-        case 'serif':
-          return '"Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", serif';
-        case 'mono':
-          return 'Menlo, Consolas, Monaco, "Roboto Mono", "MS Gothic", monospace';
-        case 'cursive':
-          return '"Comic Sans MS", "Comic Neue", "Yu Gothic", cursive';
-        case 'impact':
-          return 'Impact, "Anton", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
-        default:
-          return 'system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif';
-      }
-    }
-
-    // 中央スナップ
-    function handleCenterSnap(slider) {
-      if (!slider) return;
-      let v = parseInt(slider.value, 10);
-      const dist = Math.abs(v - 50);
-      if (dist <= 2) {
-        slider.value = 50;
-      }
-    }
-
-    function updateCenterSnap() {
-      handleCenterSnap(cropXEl);
-      handleCenterSnap(cropYEl);
-      handleCenterSnap(textXEl);
-      handleCenterSnap(textYEl);
-      handleCenterSnap(text2XEl);
-      handleCenterSnap(text2YEl);
-    }
-
-    // レイアウトプリセット（ここをいじれば自分好みにできる）
-    function applyLayoutPreset(name) {
-      switch (name) {
-        case 'cleanCenter':
-          frameSelect.value    = 'simple';
-          frameColorEl.value   = '#ffffff';
-          frameWidthEl.value   = 40;
-          frameOffsetEl.value  = 30;
-          frameRadiusEl.value  = 20;
-          frameOpacityEl.value = 100;
-
-          filterSelect.value   = 'soft';
-          blurAmountEl.value   = 4;
-          outerScaleEl.value   = 0;
-          zoomSlider.value     = 110;
-
-          cropXEl.value = 50;
-          cropYEl.value = 50;
-
-          textXEl.value = 50;
-          textYEl.value = 80;
-          break;
-
-        case 'photoFocus':
-          frameSelect.value    = 'simple';
-          frameColorEl.value   = '#ffffff';
-          frameWidthEl.value   = 25;
-          frameOffsetEl.value  = 20;
-          frameRadiusEl.value  = 10;
-          frameOpacityEl.value = 80;
-
-          filterSelect.value   = 'hard';
-          blurAmountEl.value   = 8;
-          outerScaleEl.value   = 12;
-          zoomSlider.value     = 140;
-
-          cropXEl.value = 50;
-          cropYEl.value = 45;
-
-          textXEl.value = 50;
-          textYEl.value = 85;
-          break;
-
-        case 'bottomTitle':
-          frameSelect.value    = 'simple';
-          frameColorEl.value   = '#ffffff';
-          frameWidthEl.value   = 35;
-          frameOffsetEl.value  = 35;
-          frameRadiusEl.value  = 18;
-          frameOpacityEl.value = 100;
-
-          filterSelect.value   = 'soft';
-          blurAmountEl.value   = 6;
-          outerScaleEl.value   = 0;
-          zoomSlider.value     = 120;
-
-          cropXEl.value = 50;
-          cropYEl.value = 40;
-
-          textXEl.value = 50;
-          textYEl.value = 88;
-          break;
-      }
-      updateCenterSnap();
-      redraw();
-    }
-
-    // テキスト位置プリセット
-    function applyTextPositionPreset(pos) {
-      switch (pos) {
-        case 'topLeft':
-          textXEl.value = 22;
-          textYEl.value = 18;
-          break;
-        case 'top':
-          textXEl.value = 50;
-          textYEl.value = 18;
-          break;
-        case 'topRight':
-          textXEl.value = 78;
-          textYEl.value = 18;
-          break;
-        case 'middleLeft':
-          textXEl.value = 22;
-          textYEl.value = 50;
-          break;
-        case 'center':
-          textXEl.value = 50;
-          textYEl.value = 50;
-          break;
-        case 'middleRight':
-          textXEl.value = 78;
-          textYEl.value = 50;
-          break;
-        case 'bottomLeft':
-          textXEl.value = 22;
-          textYEl.value = 82;
-          break;
-        case 'bottom':
-          textXEl.value = 50;
-          textYEl.value = 82;
-          break;
-        case 'bottomRight':
-          textXEl.value = 78;
-          textYEl.value = 82;
-          break;
-      }
-      updateCenterSnap();
-      redraw();
-    }
-
-    // ガイド線（3分割）
-    function drawGrid(size) {
-      if (!showGridEl || !showGridEl.checked) return;
-
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = size * 0.003;
-
-      const third = size / 3;
-
-      // 縦線
-      for (let i = 1; i <= 2; i++) {
-        const x = third * i;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, size);
-        ctx.stroke();
-      }
-
-      // 横線
-      for (let i = 1; i <= 2; i++) {
-        const y = third * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(size, y);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-
-    function redraw() {
-      if (!imageLoaded) return;
-
-      const size = parseInt(sizeSelect.value, 10);
-      canvas.width = size;
-      canvas.height = size;
-
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, size, size);
-
-      const xPercent = parseFloat(cropXEl.value) / 100;
-      const yPercent = parseFloat(cropYEl.value) / 100;
-      const zoom     = parseFloat(zoomSlider.value) / 100;
-
-      const baseSquare = Math.min(img.width, img.height);
-      const cropSizeInner = baseSquare / zoom;
-      const outerScaleFactor = parseFloat(outerScaleEl.value) / 100;
-      const cropSizeOuter = baseSquare / (zoom * (1 + outerScaleFactor || 0));
-
-      const maxOffsetXInner = Math.max(0, img.width  - cropSizeInner);
-      const maxOffsetYInner = Math.max(0, img.height - cropSizeInner);
-
-      let sxInner = maxOffsetXInner * xPercent;
-      let syInner = maxOffsetYInner * yPercent;
-
-      let centerX = sxInner + cropSizeInner / 2;
-      let centerY = syInner + cropSizeInner / 2;
-
-      let sxOuter = centerX - cropSizeOuter / 2;
-      let syOuter = centerY - cropSizeOuter / 2;
-
-      sxInner = Math.max(0, Math.min(sxInner, img.width  - cropSizeInner));
-      syInner = Math.max(0, Math.min(syInner, img.height - cropSizeInner));
-      sxOuter = Math.max(0, Math.min(sxOuter, img.width  - cropSizeOuter));
-      syOuter = Math.max(0, Math.min(syOuter, img.height - cropSizeOuter));
-
-      const filterStyle = filterSelect.value;
-      const baseFilter  = getBaseFilter(filterStyle);
-      const blurPx      = parseInt(blurAmountEl.value, 10);
-
-      // ① 外側ぼかし
-      ctx.filter = buildFilter(baseFilter, blurPx, true);
-      ctx.drawImage(
-        img,
-        sxOuter, syOuter, cropSizeOuter, cropSizeOuter,
-        0, 0, size, size
-      );
-
-      // ② 中央シャープ領域
-      const offsetScale = parseInt(frameOffsetEl.value, 10) / 100;
-      const margin = size * (0.02 + offsetScale * 0.18);
-
-      const innerRectX = margin;
-      const innerRectY = margin;
-      const innerRectSize = size - margin * 2;
-
-      const radiusScale = parseInt(frameRadiusEl.value, 10) / 100;
-      const maxRadius   = innerRectSize * 0.25;
-      const cornerRadius = maxRadius * radiusScale;
-
-      ctx.save();
-      roundedRectPath(ctx, innerRectX, innerRectY, innerRectSize, innerRectSize, cornerRadius);
-      ctx.clip();
-
-      ctx.filter = buildFilter(baseFilter, 0, false);
-      ctx.drawImage(
-        img,
-        sxInner, syInner, cropSizeInner, cropSizeInner,
-        0, 0, size, size
-      );
-      ctx.restore();
-
-      // ③ フレーム
-      ctx.filter = 'none';
-      const frameWidthScale = parseInt(frameWidthEl.value, 10) / 100;
-      const frameColor = frameColorEl.value;
-      drawFrame(
-        size,
-        frameSelect.value,
-        innerRectX,
-        innerRectY,
-        innerRectSize,
-        innerRectSize,
-        frameWidthScale,
-        cornerRadius,
-        frameColor
-      );
-
-      // ガイド線（お好み）
-      drawGrid(size);
-
-      // ④ テキスト
-      drawText(size);
-    }
-
-    function drawFrame(size, style, x, y, w, h, scale, radius, color) {
-      if (style === 'none') return;
-
-      const opacity = parseInt(frameOpacityEl.value, 10) / 100;
-      const [r, g, b] = [
-        parseInt(color.slice(1, 3), 16),
-        parseInt(color.slice(3, 5), 16),
-        parseInt(color.slice(5, 7), 16),
-      ];
-      const rgbaColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-
-      const minWidth   = size * 0.002;
-      const extraWidth = size * 0.028;
-      const lineWidth  = minWidth + extraWidth * scale;
-
-      ctx.lineWidth = lineWidth;
-      ctx.strokeStyle = rgbaColor;
-      roundedRectPath(ctx, x, y, w, h, radius);
-      ctx.stroke();
-    }
-
-    function drawText(size) {
-      const text1 = text1El.value.trim();
-      const text2 = text2El.value.trim();
-      if (!text1 && !text2) return;
-
-      // 文字サイズ（1と2は別スライダー）
-      const baseFontSize1 = parseInt(textSizeEl.value, 10) || 40;
-      const baseFontSize2 = textSize2El
-        ? (parseInt(textSize2El.value, 10) || baseFontSize1)
-        : baseFontSize1;
-
-      const x1Perc = parseInt(textXEl.value, 10) / 100;
-      const y1Perc = parseInt(textYEl.value, 10) / 100;
-      const x2Perc = parseInt(text2XEl.value, 10) / 100;
-      const y2Perc = parseInt(text2YEl.value, 10) / 100;
-
-      const textColor = textColorEl.value;
-      const fontFamily = resolveFontFamily(fontSelect.value);
-
-      const pos1X = size * x1Perc;
-      const pos1Y = size * y1Perc;
-      const pos2X = size * x2Perc;
-      const pos2Y = size * y2Perc;
-
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-
-      const [r, g, b] = [
-        parseInt(textColor.slice(1, 3), 16),
-        parseInt(textColor.slice(3, 5), 16),
-        parseInt(textColor.slice(5, 7), 16),
-      ];
-      const primaryColor   = `rgba(${r}, ${g}, ${b}, 0.98)`;
-      const secondaryColor = `rgba(${r}, ${g}, ${b}, 0.98)`;
-
-      ctx.shadowColor = 'rgba(0,0,0,0.7)';
-      ctx.shadowBlur  = size * 0.01;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = size * 0.004;
-
-      const primaryFontPx = (baseFontSize1 / 1080) * size;
-      const secondFontPx  = (baseFontSize2 / 1080) * size;
-
-      // テキスト1
-      if (text1) {
-        ctx.font = `600 ${primaryFontPx}px ${fontFamily}`;
-        ctx.fillStyle = primaryColor;
-        ctx.fillText(text1, pos1X, pos1Y);
-      }
-
-      // テキスト2
-      if (text2) {
-        ctx.font = `600 ${secondFontPx}px ${fontFamily}`;
-        ctx.fillStyle = secondaryColor;
-        ctx.fillText(text2, pos2X, pos2Y);
-      }
-
-      ctx.restore();
-    }
-
-
-    // ランダム背景生成ボタン
-    function generateRandomArt() {
-      const size = 1080;
-      const off = document.createElement('canvas');
-      off.width = size;
-      off.height = size;
-      const g = off.getContext('2d');
-
-      // グラデーションのカラーパレット候補（Granim.js のデモ風）
-      const palettes = [
-        ['#ff9966', '#ff5e62'], // warm
-        ['#00F260', '#0575E6'], // green → blue
-        ['#e1eec3', '#f05053'], // soft → red
-        ['#8360c3', '#2ebf91'], // purple → teal
-        ['#f7971e', '#ffd200']  // orange → yellow
-      ];
-
-      const palette = palettes[Math.floor(Math.random() * palettes.length)];
-      const [c1, c2] = palette;
-
-      // 左 → 右 のシンプルな線形グラデーション
-      const grad = g.createLinearGradient(0, size * 0.5, size, size * 0.5);
-      grad.addColorStop(0, c1);
-      grad.addColorStop(1, c2);
-
-      g.fillStyle = grad;
-      g.fillRect(0, 0, size, size);
-
-      // 生成されたグラデーションを img に流し込む
-      img.src = off.toDataURL('image/png');
-    }
-
-    generateRandomArt();
-
-    generateArtBtn.addEventListener('click', () => {
-      if (fileInput) fileInput.value = '';
-      generateRandomArt();
-    });
-
-    downloadBtn.addEventListener('click', function () {
-      if (!imageLoaded) return;
-      const link = document.createElement('a');
-      link.download = 'jacket.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-  </script>
+    </div><!-- /col-right -->
+  </div><!-- /main -->
+
+  <footer>
+    <span>© <span id="year"></span> GLI · All rights reserved</span>
+    <span style="opacity:.35;">Jacket Maker Beta</span>
+  </footer>
+</div>
+
+<script>
+/* ══ WebGL fluid ══ */
+(function(){
+  const cv=document.getElementById('glCanvas'),gl=cv.getContext('webgl')||cv.getContext('experimental-webgl');
+  if(!gl)return;
+  const vS=`attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+  const fS=`precision highp float;uniform vec2 u_res;uniform float u_time;
+  vec3 m289(vec3 x){return x-floor(x*(1./289.))*289.;}vec4 m289(vec4 x){return x-floor(x*(1./289.))*289.;}
+  vec4 perm(vec4 x){return m289((x*34.+1.)*x);}vec4 tIS(vec4 r){return 1.79284291400159-.85373472095314*r;}
+  float sn(vec3 v){const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy)),x0=v-i+dot(i,C.xxx),g=step(x0.yzx,x0.xyz),l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy),i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx,x2=x0-i2+C.yyy,x3=x0-D.yyy;i=m289(i);
+  vec4 pp=perm(perm(perm(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+  float n_=.142857142857;vec3 ns=n_*D.wyz-D.xzx;vec4 j=pp-49.*floor(pp*ns.z*ns.z);
+  vec4 x_=floor(j*ns.z),y_=floor(j-7.*x_),x=x_*ns.x+ns.yyyy,y=y_*ns.x+ns.yyyy,h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy),b1=vec4(x.zw,y.zw),s0=floor(b0)*2.+1.,s1=floor(b1)*2.+1.,sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy,a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x),p1=vec3(a0.zw,h.y),p2=vec3(a1.xy,h.z),p3=vec3(a1.zw,h.w);
+  vec4 nm=tIS(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
+  vec4 mm=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);mm*=mm;
+  return 42.*dot(mm*mm,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));}
+  void main(){
+    vec2 uv=gl_FragCoord.xy/u_res,pp=uv*vec2(u_res.x/u_res.y,1.);float t=u_time*.16;
+    vec2 w=vec2(sn(vec3(pp*1.1,t*.7)),sn(vec3(pp*1.1+5.2,t*.7+1.3)))*.26,pw=pp+w;
+    float n1=sn(vec3(pw*1.6,t*.9)),n2=sn(vec3(pw*2.8+1.3,t*1.2+.7)),n3=sn(vec3(pw*5.2-.8,t*.6+2.1)),n4=sn(vec3(pp*.7+w*.6,t*.4));
+    float lq=(n1*.46+n2*.28+n3*.14+n4*.12)*.5+.5;
+    float rp=sn(vec3(pw*4.+lq*.5,t*1.5+.9))*.5+.5;lq=mix(lq,rp,.2);
+    float vig=1.-smoothstep(.28,.82,length(uv-.5+vec2(n1*.03,n2*.03)));
+    float b1=smoothstep(.56,.65,sn(vec3(pw*1.-.4,t*.5)));
+    float b2=smoothstep(.54,.63,sn(vec3(pw*1.2+1.1,t*.42+1.)));
+    float b3=smoothstep(.58,.66,sn(vec3(pw*.8+2.7,t*.35+2.4)));
+    vec3 col=mix(vec3(0.,.02,.01),vec3(.01,.06,.032),lq*lq);
+    col+=vec3(0.,1.,.4)*b1*.24*vig+vec3(0.,.85,.35)*b2*.17*vig+vec3(0.,.7,.3)*b3*.11*vig;
+    col+=vec3(.12,1.,.52)*pow(lq,7.)*.15;
+    col+=vec3(0.,.7,.32)*pow(abs(rp-.5)*2.,2.5)*.09*vig;
+    col+=vec3(0.,.5,.22)*smoothstep(.42,.58,lq)*(1.-smoothstep(.58,.75,lq))*.06;
+    col*=vig*.8+.22;gl_FragColor=vec4(col,1.);}`;
+  function compile(t,s){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;}
+  const prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,vS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,fS));gl.linkProgram(prog);gl.useProgram(prog);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const loc=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  const uR=gl.getUniformLocation(prog,'u_res'),uT=gl.getUniformLocation(prog,'u_time');
+  function resize(){cv.width=innerWidth;cv.height=innerHeight;gl.viewport(0,0,cv.width,cv.height);}
+  window.addEventListener('resize',resize);resize();
+  let s0=null;(function f(ts){if(!s0)s0=ts;gl.uniform2f(uR,cv.width,cv.height);gl.uniform1f(uT,(ts-s0)/1000);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(f);})(0);
+})();
+
+/* ══ cursor ══ */
+(function(){
+  const dot=document.getElementById('cursorDot'),ring=document.getElementById('cursorRing');
+  if(!dot||!ring)return;
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  (function loop(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;dot.style.left=mx+'px';dot.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+  document.querySelectorAll('a,button,select,input').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.width='50px';ring.style.height='50px';ring.style.borderColor='rgba(0,255,102,.85)';});
+    el.addEventListener('mouseleave',()=>{ring.style.width='34px';ring.style.height='34px';ring.style.borderColor='rgba(0,255,102,.45)';});
+  });
+})();
+
+document.getElementById('year').textContent=new Date().getFullYear();
+
+/* ══ section toggle ══ */
+function toggleSec(id){
+  const body=document.getElementById(id+'-body');
+  const arrow=document.getElementById(id+'-arrow');
+  const closed=body.classList.toggle('closed');
+  arrow.classList.toggle('open',!closed);
+}
+
+/* ══ Jacket Maker ══ */
+const $=id=>document.getElementById(id);
+const fileInput=$('fileInput'),sizeSelect=$('sizeSelect'),frameSelect=$('frameSelect');
+const frameColorEl=$('frameColor'),frameWidthEl=$('frameWidth'),frameOffsetEl=$('frameOffset');
+const frameRadiusEl=$('frameRadius'),frameOpacityEl=$('frameOpacity'),filterSelect=$('filterSelect');
+const blurAmountEl=$('blurAmount'),outerScaleEl=$('outerScale'),showGridEl=$('showGrid');
+const cropXEl=$('cropX'),cropYEl=$('cropY'),zoomSlider=$('zoom');
+const text1El=$('text1'),text2El=$('text2'),fontSelect=$('fontSelect'),customFontEl=$('customFont');
+const textSizeEl=$('textSize'),textSize2El=$('textSize2');
+const textXEl=$('textX'),textYEl=$('textY'),text2XEl=$('text2X'),text2YEl=$('text2Y');
+const textColorEl=$('textColor'),downloadBtn=$('downloadBtn');
+const previewCanvas=$('canvas'),ctx=previewCanvas.getContext('2d');
+
+const slMap={frameWidth:'frameWidthVal',frameOffset:'frameOffsetVal',frameRadius:'frameRadiusVal',frameOpacity:'frameOpacityVal',cropX:'cropXVal',cropY:'cropYVal',zoom:'zoomVal',blurAmount:'blurAmountVal',outerScale:'outerScaleVal',textSize:'textSizeVal',textSize2:'textSize2Val',textX:'textXVal',textY:'textYVal',text2X:'text2XVal',text2Y:'text2YVal'};
+Object.entries(slMap).forEach(([sid,vid])=>{const s=$(sid),v=$(vid);if(s&&v)s.addEventListener('input',()=>v.textContent=s.value);});
+
+const img=new Image();let imageLoaded=false;
+img.onload=()=>{imageLoaded=true;updateSnap();redraw();downloadBtn.disabled=false;};
+
+fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{img.src=ev.target.result;};r.readAsDataURL(f);});
+
+document.getElementById('uploadTrigger').addEventListener('click',()=>fileInput.click());
+
+sizeSelect.addEventListener('change',()=>{$('sizeBadge').textContent=sizeSelect.value+' × '+sizeSelect.value;});
+
+const allInputs=[sizeSelect,frameSelect,frameColorEl,frameWidthEl,frameOffsetEl,frameRadiusEl,frameOpacityEl,filterSelect,blurAmountEl,outerScaleEl,cropXEl,cropYEl,zoomSlider,text1El,text2El,fontSelect,customFontEl,textSizeEl,textSize2El,textXEl,textYEl,text2XEl,text2YEl,textColorEl,showGridEl];
+allInputs.forEach(el=>{if(el)el.addEventListener('input',()=>{updateSnap();redraw();});});
+
+$('addTextBlockBtn').addEventListener('click',()=>{$('textBlock2Panel').style.display='block';$('text2Controls').style.display='block';$('addTextBlockBtn').disabled=true;redraw();});
+
+document.querySelectorAll('[data-preset]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('[data-preset]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyPreset(btn.dataset.preset);});});
+document.querySelectorAll('[data-pos]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('[data-pos]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyTextPos(btn.dataset.pos);});});
+
+function snap(sl){if(!sl)return;if(Math.abs(parseInt(sl.value)-50)<=2)sl.value=50;const v=$(slMap[sl.id]);if(v)v.textContent=sl.value;}
+function updateSnap(){[cropXEl,cropYEl,textXEl,textYEl,text2XEl,text2YEl].forEach(snap);}
+
+function getBF(style){if(style==='soft')return 'contrast(108%) saturate(110%)';if(style==='hard')return 'contrast(130%) saturate(130%)';if(style==='mono')return 'grayscale(85%) contrast(115%)';return 'none';}
+function mkFilter(base,blur,useBlur){const p=[];if(useBlur&&blur>0)p.push(`blur(${blur}px)`);if(base&&base!=='none')p.push(base);return p.join(' ')||'none';}
+
+function rrp(cx,x,y,w,h,r){const rd=Math.max(0,Math.min(r,Math.min(w,h)/2));cx.beginPath();cx.moveTo(x+rd,y);cx.lineTo(x+w-rd,y);cx.quadraticCurveTo(x+w,y,x+w,y+rd);cx.lineTo(x+w,y+h-rd);cx.quadraticCurveTo(x+w,y+h,x+w-rd,y+h);cx.lineTo(x+rd,y+h);cx.quadraticCurveTo(x,y+h,x,y+h-rd);cx.lineTo(x,y+rd);cx.quadraticCurveTo(x,y,x+rd,y);cx.closePath();}
+
+function resolvFF(key){if(customFontEl&&customFontEl.value.trim())return customFontEl.value.trim();const m={system:'system-ui,-apple-system,"Yu Gothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif',notoSans:'"Noto Sans JP",system-ui,sans-serif',mPlusRounded:'"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',shippori:'"Shippori Antique B1","Yu Gothic",sans-serif',sans:'Helvetica,Arial,sans-serif',serif:'"Yu Mincho","Hiragino Mincho ProN",serif',mono:'Menlo,Consolas,Monaco,monospace',impact:'Impact,"Anton",sans-serif'};return m[key]||m.system;}
+
+function redraw(){
+  if(!imageLoaded)return;
+  const size=parseInt(sizeSelect.value);previewCanvas.width=size;previewCanvas.height=size;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,size,size);
+  const xP=parseFloat(cropXEl.value)/100,yP=parseFloat(cropYEl.value)/100,zoom=parseFloat(zoomSlider.value)/100;
+  const bs=Math.min(img.width,img.height),ci=bs/zoom,oF=parseFloat(outerScaleEl.value)/100,co=bs/(zoom*(1+oF));
+  let sxI=Math.max(0,img.width-ci)*xP,syI=Math.max(0,img.height-ci)*yP;
+  let sxO=sxI+ci/2-co/2,syO=syI+ci/2-co/2;
+  sxI=Math.max(0,Math.min(sxI,img.width-ci));syI=Math.max(0,Math.min(syI,img.height-ci));
+  sxO=Math.max(0,Math.min(sxO,img.width-co));syO=Math.max(0,Math.min(syO,img.height-co));
+  const bf=getBF(filterSelect.value),blurPx=parseInt(blurAmountEl.value);
+  ctx.filter=mkFilter(bf,blurPx,true);ctx.drawImage(img,sxO,syO,co,co,0,0,size,size);
+  const margin=size*(0.02+(parseInt(frameOffsetEl.value)/100)*0.18);
+  const iX=margin,iY=margin,iS=size-margin*2,cr=iS*0.25*(parseInt(frameRadiusEl.value)/100);
+  ctx.save();rrp(ctx,iX,iY,iS,iS,cr);ctx.clip();
+  ctx.filter=mkFilter(bf,0,false);ctx.drawImage(img,sxI,syI,ci,ci,0,0,size,size);ctx.restore();
+  ctx.filter='none';
+  if(frameSelect.value!=='none'){
+    const fc=frameColorEl.value,op=parseInt(frameOpacityEl.value)/100;
+    const r=parseInt(fc.slice(1,3),16),g=parseInt(fc.slice(3,5),16),b=parseInt(fc.slice(5,7),16);
+    ctx.lineWidth=size*0.002+size*0.028*(parseInt(frameWidthEl.value)/100);
+    ctx.strokeStyle=`rgba(${r},${g},${b},${op})`;rrp(ctx,iX,iY,iS,iS,cr);ctx.stroke();
+  }
+  if(showGridEl.checked){ctx.save();ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=size*.003;const t=size/3;for(let i=1;i<=2;i++){ctx.beginPath();ctx.moveTo(t*i,0);ctx.lineTo(t*i,size);ctx.stroke();ctx.beginPath();ctx.moveTo(0,t*i);ctx.lineTo(size,t*i);ctx.stroke();}ctx.restore();}
+  const t1=text1El.value.trim(),t2=text2El.value.trim();
+  if(t1||t2){
+    const ff=resolvFF(fontSelect.value),tc=textColorEl.value;
+    const tr=parseInt(tc.slice(1,3),16),tg=parseInt(tc.slice(3,5),16),tb=parseInt(tc.slice(5,7),16);
+    const rgba=`rgba(${tr},${tg},${tb},.98)`;
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=size*.01;ctx.shadowOffsetY=size*.004;
+    if(t1){ctx.font=`600 ${(parseInt(textSizeEl.value)/1080)*size}px ${ff}`;ctx.fillStyle=rgba;ctx.fillText(t1,size*(parseInt(textXEl.value)/100),size*(parseInt(textYEl.value)/100));}
+    if(t2){ctx.font=`600 ${(parseInt(textSize2El.value)/1080)*size}px ${ff}`;ctx.fillStyle=rgba;ctx.fillText(t2,size*(parseInt(text2XEl.value)/100),size*(parseInt(text2YEl.value)/100));}
+    ctx.restore();
+  }
+}
+
+function syncSl(id,val){const el=$(id);const vEl=$(id+'Val')||$(slMap[id]);if(el)el.value=val;if(vEl)vEl.textContent=val;}
+
+function applyPreset(name){
+  const P={cleanCenter:{frameSelect:'simple',fw:40,fo:30,fr:20,fop:100,filter:'soft',blur:4,outer:0,zoom:110,cx:50,cy:50,tx:50,ty:80},photoFocus:{frameSelect:'simple',fw:25,fo:20,fr:10,fop:80,filter:'hard',blur:8,outer:12,zoom:140,cx:50,cy:45,tx:50,ty:85},bottomTitle:{frameSelect:'simple',fw:35,fo:35,fr:18,fop:100,filter:'soft',blur:6,outer:0,zoom:120,cx:50,cy:40,tx:50,ty:88}};
+  const p=P[name];if(!p)return;
+  if(p.frameSelect)frameSelect.value=p.frameSelect;if(p.filter)filterSelect.value=p.filter;
+  syncSl('frameWidth',p.fw);syncSl('frameOffset',p.fo);syncSl('frameRadius',p.fr);syncSl('frameOpacity',p.fop);
+  syncSl('blurAmount',p.blur);syncSl('outerScale',p.outer);syncSl('zoom',p.zoom);
+  syncSl('cropX',p.cx);syncSl('cropY',p.cy);syncSl('textX',p.tx);syncSl('textY',p.ty);
+  updateSnap();redraw();
+}
+
+function applyTextPos(pos){
+  const M={topLeft:[22,18],top:[50,18],topRight:[78,18],middleLeft:[22,50],center:[50,50],middleRight:[78,50],bottomLeft:[22,82],bottom:[50,82],bottomRight:[78,82]};
+  const [x,y]=M[pos]||[50,80];syncSl('textX',x);syncSl('textY',y);updateSnap();redraw();
+}
+
+function genArt(){
+  const sz=1080,off=document.createElement('canvas');off.width=sz;off.height=sz;
+  const g=off.getContext('2d');
+  const pals=[['#ff9966','#ff5e62'],['#00F260','#0575E6'],['#e1eec3','#f05053'],['#8360c3','#2ebf91'],['#f7971e','#ffd200'],['#00ff66','#003319'],['#050f07','#0a2015']];
+  const [c1,c2]=pals[Math.floor(Math.random()*pals.length)];
+  const gr=g.createLinearGradient(0,sz*.5,sz,sz*.5);gr.addColorStop(0,c1);gr.addColorStop(1,c2);
+  g.fillStyle=gr;g.fillRect(0,0,sz,sz);img.src=off.toDataURL();
+}
+genArt();
+$('generateArtBtn').addEventListener('click',()=>{if(fileInput)fileInput.value='';genArt();});
+downloadBtn.addEventListener('click',()=>{if(!imageLoaded)return;const a=document.createElement('a');a.download='jacket.png';a.href=previewCanvas.toDataURL('image/png');a.click();});
+</script>
 </body>
 </html>
